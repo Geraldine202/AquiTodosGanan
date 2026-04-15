@@ -1,0 +1,110 @@
+.toolbar-duoc {
+  --background: #111;
+  --color: white;
+  padding-left: 10px;
+  padding-right: 10px;
+  border-bottom: 1px solid rgba(255,255,255,0.1);
+}
+
+.header-contenido {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+}
+
+.lado-izquierdo,
+.lado-derecho {
+  display: flex;
+  align-items: center;
+}
+
+.grupo-clima-menu {
+  display: flex;
+  align-items: center;
+  gap: 0;
+}
+
+.clima-box {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  color: white;
+  font-size: 13px;
+  font-weight: 400;
+  background: rgba(255, 255, 255, 0.15);
+  padding: 6px 10px;
+  border-radius: 20px;
+  margin-left: -4px;
+}
+
+.logo-duoc {
+  height: 36px;
+  width: auto;
+  object-fit: contain;
+  display: block;
+  margin-left: 8px;
+}
+
+.menu-blanco {
+  --color: white;
+}
+
+.contenedor-home {
+  text-align: center;
+  margin-top: 50px;
+}
+
+h1 {
+  font-size: 28px;
+  font-weight: 600;
+  margin-bottom: 10px;
+}
+
+p {
+  font-size: 16px;
+  font-weight: 300;
+  color: #666;
+}
+
+.container {
+  padding: 16px;
+}
+
+.card-item {
+  border-radius: 14px;
+  margin-bottom: 12px;
+}
+
+.card-item h2 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.card-item p {
+  margin: 4px 0;
+  color: #666;
+}
+
+.tipo {
+  font-size: 12px;
+  padding: 4px 10px;
+  border-radius: 20px;
+}
+
+.deporte {
+  background: #cce5ff;
+  color: #004085;
+}
+
+.integracion {
+  background: #fff3cd;
+  color: #856404;
+}
+
+.btn-agregar {
+  --background: #f58220;
+  --border-radius: 20px;
+  margin-top: 20px;
+}

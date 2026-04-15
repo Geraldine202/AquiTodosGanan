@@ -1,0 +1,132 @@
+/* ===== HEADER ===== */
+
+.toolbar-duoc {
+  --background: #111;
+  --color: white;
+  --min-height: 56px;
+  padding: 0 10px;
+  border-bottom: 1px solid rgba(255,255,255,0.1);
+}
+
+.header-contenido {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+}
+
+.lado-izquierdo,
+.lado-derecho {
+  display: flex;
+  align-items: center;
+}
+
+/* grupo clima + menú */
+.grupo-clima-menu {
+  display: flex;
+  align-items: center;
+}
+
+/* clima */
+.clima-box {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  color: white;
+  font-size: 13px;
+  background: rgba(255, 255, 255, 0.15);
+  padding: 5px 10px;
+  border-radius: 20px;
+  margin-left: 4px;
+}
+
+/* logo */
+.logo-duoc {
+  height: 26px; /* 👈 antes estaba muy grande */
+  width: auto;
+  object-fit: contain;
+  margin-left: 10px;
+}
+
+/* botón menú */
+.menu-blanco {
+  --color: white;
+}
+
+/* ===== CONTENIDO GENERAL ===== */
+
+.container {
+  padding: 16px;
+}
+
+/* buscador */
+.search-bar {
+  --background: #f5f5f5;
+  border-radius: 12px;
+  margin-bottom: 16px;
+}
+
+/* ===== CARDS ===== */
+
+.card-item {
+  border-radius: 16px;
+  margin-bottom: 14px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+}
+
+.card-item h2 {
+  margin: 0 0 4px 0;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.card-item p {
+  margin: 0;
+  font-size: 14px;
+  color: #666;
+}
+
+/* fila superior */
+.fila-superior {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+/* estado */
+.estado {
+  font-size: 12px;
+  padding: 5px 10px;
+  border-radius: 20px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.activo {
+  background: #d4edda;
+  color: #155724;
+}
+
+.suspendido {
+  background: #f8d7da;
+  color: #721c24;
+}
+
+/* acciones */
+.acciones {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+/* botón agregar */
+.btn-agregar {
+  --background: #f58220;
+  --color: white;
+  --border-radius: 24px;
+  margin-bottom: 18px;
+  font-weight: 600;
+  text-transform: none;
+}

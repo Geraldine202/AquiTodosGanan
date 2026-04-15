@@ -128,8 +128,7 @@ ion-toolbar {
 
 /* ===== BOTÓN ===== */
 
-.btn-login-main:hover {
-  --background: #111; /* 👈 negro */
+.btn-login-main {
   --color: white;
   --border-radius: 12px;
   font-weight: 500;

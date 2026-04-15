@@ -1,0 +1,148 @@
+<ion-header>
+  <ion-toolbar class="toolbar-duoc">
+    <div class="header-contenido">
+
+      <div class="lado-izquierdo">
+        <div class="grupo-clima-menu">
+          <ion-buttons>
+            <ion-menu-button autoHide="false" class="menu-blanco"></ion-menu-button>
+          </ion-buttons>
+
+          <div class="clima-box">
+            <ion-icon name="partly-sunny-outline"></ion-icon>
+            <span>18°C, Puente Alto</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="lado-derecho">
+        <img src="assets/logoDuocBlanco.png" alt="Logo Duoc UC" class="logo-duoc">
+      </div>
+
+    </div>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content [fullscreen]="true">
+
+  <div class="container">
+
+    <ion-item class="search-bar">
+      <ion-icon name="search-outline" slot="start"></ion-icon>
+      <ion-input placeholder="Buscar alumno..."></ion-input>
+    </ion-item>
+
+    <ion-button expand="block" class="btn-agregar" id="open-modal-agregar">
+      Agregar Alumno
+    </ion-button>
+
+    <ion-card class="card-item">
+      <ion-card-content>
+
+        <div class="fila-superior">
+          <div>
+            <h2>Juan Pérez</h2>
+            <p>Ingeniería en Informática</p>
+          </div>
+          <span class="estado activo">Activo</span>
+        </div>
+
+        <div class="acciones">
+          <ion-button fill="outline" size="small" class="btn-editar" id="open-modal-editar-1">
+            Editar
+          </ion-button>
+
+          <ion-button fill="solid" size="small" color="danger">
+            Eliminar
+          </ion-button>
+        </div>
+
+      </ion-card-content>
+    </ion-card>
+
+  </div>
+
+  <!-- MODAL AGREGAR -->
+  <ion-modal #modalAgregar trigger="open-modal-agregar">
+    <ng-template>
+      <ion-header>
+        <ion-toolbar class="modal-toolbar">
+          <ion-title>Agregar Alumno</ion-title>
+          <ion-buttons slot="end">
+            <ion-button (click)="modalAgregar.dismiss()">Cancelar</ion-button>
+          </ion-buttons>
+        </ion-toolbar>
+      </ion-header>
+
+      <ion-content class="modal-content">
+        <div class="formulario-modal">
+
+          <ion-item class="input-modal">
+            <ion-label position="stacked">Nombre completo</ion-label>
+            <ion-input placeholder="Ej: Juan Pérez"></ion-input>
+          </ion-item>
+
+          <ion-item class="input-modal">
+            <ion-label position="stacked">Carrera</ion-label>
+            <ion-input placeholder="Ej: Ingeniería en Informática"></ion-input>
+          </ion-item>
+
+          <ion-item class="input-modal">
+            <ion-label position="stacked">Estado</ion-label>
+            <ion-select placeholder="Selecciona un estado">
+              <ion-select-option value="activo">Activo</ion-select-option>
+              <ion-select-option value="suspendido">Suspendido</ion-select-option>
+            </ion-select>
+          </ion-item>
+
+          <ion-button expand="block" class="btn-guardar-modal" (click)="modalAgregar.dismiss()">
+            Guardar Alumno
+          </ion-button>
+
+        </div>
+      </ion-content>
+    </ng-template>
+  </ion-modal>
+
+  <!-- MODAL EDITAR -->
+  <ion-modal #modalEditar1 trigger="open-modal-editar-1">
+    <ng-template>
+      <ion-header>
+        <ion-toolbar class="modal-toolbar">
+          <ion-title>Editar Alumno</ion-title>
+          <ion-buttons slot="end">
+            <ion-button (click)="modalEditar1.dismiss()">Cancelar</ion-button>
+          </ion-buttons>
+        </ion-toolbar>
+      </ion-header>
+
+      <ion-content class="modal-content">
+        <div class="formulario-modal">
+
+          <ion-item class="input-modal">
+            <ion-label position="stacked">Nombre completo</ion-label>
+            <ion-input value="Juan Pérez"></ion-input>
+          </ion-item>
+
+          <ion-item class="input-modal">
+            <ion-label position="stacked">Carrera</ion-label>
+            <ion-input value="Ingeniería en Informática"></ion-input>
+          </ion-item>
+
+          <ion-item class="input-modal">
+            <ion-label position="stacked">Estado</ion-label>
+            <ion-select value="activo">
+              <ion-select-option value="activo">Activo</ion-select-option>
+              <ion-select-option value="suspendido">Suspendido</ion-select-option>
+            </ion-select>
+          </ion-item>
+
+          <ion-button expand="block" class="btn-guardar-modal" (click)="modalEditar1.dismiss()">
+            Guardar Cambios
+          </ion-button>
+
+        </div>
+      </ion-content>
+    </ng-template>
+  </ion-modal>
+</ion-content>

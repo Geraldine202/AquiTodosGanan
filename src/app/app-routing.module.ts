@@ -8,17 +8,21 @@ const routes: Routes = [
     pathMatch: 'full'
   },
   {
-    path: 'folder/:id',
-    loadChildren: () => import('./folder/folder.module').then( m => m.FolderPageModule)
-  },
-  {
     path: 'home',
     loadChildren: () => import('./pages/home/home.module').then( m => m.HomePageModule)
   },
   {
     path: 'login',
     loadChildren: () => import('./pages/login/login.module').then( m => m.LoginPageModule)
+  },  {
+    path: 'admin-alumnos',
+    loadChildren: () => import('./pages/admin-alumnos/admin-alumnos.module').then( m => m.AdminAlumnosPageModule)
+  },
+  {
+    path: 'admin-actividades',
+    loadChildren: () => import('./pages/admin-actividades/admin-actividades.module').then( m => m.AdminActividadesPageModule)
   }
+
 
 ];
 
