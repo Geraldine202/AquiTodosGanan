@@ -5,12 +5,10 @@ ion-menu {
   --color: white;
 }
 
-/* fondo */
 ion-menu ion-content {
   --background: #111;
 }
 
-/* header */
 ion-menu ion-toolbar {
   --background: #111;
   --color: white;
@@ -23,7 +21,6 @@ ion-menu ion-title {
   letter-spacing: 0.5px;
 }
 
-/* lista */
 ion-menu ion-list {
   background: transparent;
   padding: 12px 0;
@@ -38,14 +35,14 @@ ion-menu ion-item {
   --min-height: 48px;
   border-radius: 12px;
   margin: 4px 10px;
-  transition: all 0.2s ease;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, opacity 0.2s ease;
 }
 
 /* iconos */
 ion-menu ion-item ion-icon {
   color: rgba(255, 255, 255, 0.85);
   font-size: 20px;
-  transition: color 0.2s ease;
+  transition: transform 0.2s ease, color 0.2s ease;
 }
 
 /* texto */
@@ -53,23 +50,43 @@ ion-menu ion-item ion-label {
   font-weight: 500;
 }
 
-/* hover (PC) */
+/* hover */
 ion-menu ion-item:hover {
   --background: rgba(255, 255, 255, 0.06);
+  transform: translateX(4px);
 }
 
-/* activo */
+/* item activo iluminado */
 ion-menu ion-item.selected {
-  --background: rgba(255, 255, 255, 0.1);
-  --color: white;
+  --background: rgba(245, 130, 32, 0.16);
+  --color: #ffffff;
+  box-shadow: 0 0 0 1px rgba(245, 130, 32, 0.25),
+              0 0 14px rgba(245, 130, 32, 0.18);
 }
 
 ion-menu ion-item.selected ion-icon {
-  color: white;
+  color: #f58220;
+  transform: scale(1.08);
 }
 
 /* headers secundarios */
 ion-menu ion-note,
 ion-menu ion-list-header {
   color: rgba(255, 255, 255, 0.6);
+}
+
+/* animación de entrada del menú */
+ion-menu ion-item {
+  animation: slideInMenu 0.28s ease;
+}
+
+@keyframes slideInMenu {
+  from {
+    opacity: 0;
+    transform: translateX(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
 }

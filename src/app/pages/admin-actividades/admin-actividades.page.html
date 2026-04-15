@@ -14,39 +14,157 @@
           </div>
         </div>
       </div>
+
       <div class="lado-derecho">
         <img src="assets/logoDuocBlanco.png" alt="Logo Duoc UC" class="logo-duoc">
       </div>
+
     </div>
   </ion-toolbar>
 </ion-header>
 
-<ion-content>
+<ion-content [fullscreen]="true">
 
   <div class="container">
 
-    <!-- LISTA -->
-    <ion-card class="card-item">
-      <ion-card-content>
-        <h2>Taller Deportivo</h2>
-        <p>400 puntos</p>
-        <span class="tipo deporte">Deportivo</span>
-      </ion-card-content>
-    </ion-card>
+    <ion-item class="search-bar">
+      <ion-icon name="search-outline" slot="start"></ion-icon>
+      <ion-input placeholder="Buscar actividad..."></ion-input>
+    </ion-item>
 
-    <ion-card class="card-item">
-      <ion-card-content>
-        <h2>Actividad de Integración</h2>
-        <p>150 puntos</p>
-        <span class="tipo integracion">Integración</span>
-      </ion-card-content>
-    </ion-card>
-
-    <!-- BOTÓN -->
-    <ion-button expand="block" class="btn-agregar">
+    <ion-button expand="block" class="btn-agregar" id="open-modal-agregar-actividad">
       Agregar Actividad
     </ion-button>
 
+    <ion-card class="card-item">
+      <ion-card-content>
+
+        <div class="fila-superior">
+          <div>
+            <h2>Taller Deportivo</h2>
+            <p>400 puntos</p>
+          </div>
+          <span class="estado activo">Activo</span>
+        </div>
+
+        <div class="detalle-actividad">
+          <p><strong>Tipo:</strong> Deportivo</p>
+          <p><strong>Fecha:</strong> 20/04/2026</p>
+        </div>
+
+        <div class="acciones">
+          <ion-button fill="outline" size="small" class="btn-editar" id="open-modal-editar-actividad-1">
+            Editar
+          </ion-button>
+
+          <ion-button fill="solid" size="small" color="danger">
+            Eliminar
+          </ion-button>
+        </div>
+
+      </ion-card-content>
+    </ion-card>
   </div>
 
+  <!-- MODAL AGREGAR -->
+  <ion-modal #modalAgregarActividad trigger="open-modal-agregar-actividad">
+    <ng-template>
+      <ion-header>
+        <ion-toolbar class="modal-toolbar">
+          <ion-title>Agregar Actividad</ion-title>
+          <ion-buttons slot="end">
+            <ion-button (click)="modalAgregarActividad.dismiss()">Cancelar</ion-button>
+          </ion-buttons>
+        </ion-toolbar>
+      </ion-header>
+
+      <ion-content class="modal-content">
+        <div class="formulario-modal">
+
+          <ion-item class="input-modal">
+            <ion-label position="stacked">Nombre de la actividad</ion-label>
+            <ion-input placeholder="Ej: Taller Deportivo"></ion-input>
+          </ion-item>
+
+          <ion-item class="input-modal">
+            <ion-label position="stacked">Puntaje</ion-label>
+            <ion-input placeholder="Ej: 400"></ion-input>
+          </ion-item>
+
+          <ion-item class="input-modal">
+            <ion-label position="stacked">Tipo</ion-label>
+            <ion-select placeholder="Selecciona un tipo">
+              <ion-select-option value="deportivo">Deportivo</ion-select-option>
+              <ion-select-option value="integracion">Integración</ion-select-option>
+              <ion-select-option value="sostenibilidad">Sostenibilidad</ion-select-option>
+            </ion-select>
+          </ion-item>
+
+          <ion-item class="input-modal">
+            <ion-label position="stacked">Estado</ion-label>
+            <ion-select placeholder="Selecciona un estado">
+              <ion-select-option value="activo">Activa</ion-select-option>
+              <ion-select-option value="cerrada">Cerrada</ion-select-option>
+            </ion-select>
+          </ion-item>
+
+          <ion-button expand="block" class="btn-guardar-modal" (click)="modalAgregarActividad.dismiss()">
+            Guardar Actividad
+          </ion-button>
+
+        </div>
+      </ion-content>
+    </ng-template>
+  </ion-modal>
+
+  <!-- MODAL EDITAR 1 -->
+  <ion-modal #modalEditarActividad1 trigger="open-modal-editar-actividad-1">
+    <ng-template>
+      <ion-header>
+        <ion-toolbar class="modal-toolbar">
+          <ion-title>Editar Actividad</ion-title>
+          <ion-buttons slot="end">
+            <ion-button (click)="modalEditarActividad1.dismiss()">Cancelar</ion-button>
+          </ion-buttons>
+        </ion-toolbar>
+      </ion-header>
+
+      <ion-content class="modal-content">
+        <div class="formulario-modal">
+
+          <ion-item class="input-modal">
+            <ion-label position="stacked">Nombre de la actividad</ion-label>
+            <ion-input value="Taller Deportivo"></ion-input>
+          </ion-item>
+
+          <ion-item class="input-modal">
+            <ion-label position="stacked">Puntaje</ion-label>
+            <ion-input value="400"></ion-input>
+          </ion-item>
+
+          <ion-item class="input-modal">
+            <ion-label position="stacked">Tipo</ion-label>
+            <ion-select value="deportivo">
+              <ion-select-option value="deportivo">Deportivo</ion-select-option>
+              <ion-select-option value="integracion">Integración</ion-select-option>
+              <ion-select-option value="sostenibilidad">Sostenibilidad</ion-select-option>
+            </ion-select>
+          </ion-item>
+
+          <ion-item class="input-modal">
+            <ion-label position="stacked">Estado</ion-label>
+            <ion-select value="activo">
+              <ion-select-option value="activo">Activa</ion-select-option>
+              <ion-select-option value="cerrada">Cerrada</ion-select-option>
+            </ion-select>
+          </ion-item>
+
+          <ion-button expand="block" class="btn-guardar-modal" (click)="modalEditarActividad1.dismiss()">
+            Guardar Cambios
+          </ion-button>
+
+        </div>
+      </ion-content>
+    </ng-template>
+  </ion-modal>
 </ion-content>

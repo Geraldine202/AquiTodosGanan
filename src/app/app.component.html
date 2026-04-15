@@ -12,23 +12,36 @@
 
       <ion-list>
 
-        <ion-item  (click)="cerrarMenu()" routerLink="/login">
+        <ion-item 
+          (click)="cerrarMenu()"
+          routerLink="/login"
+          routerLinkActive="selected">
           <ion-icon name="log-in-outline" slot="start"></ion-icon>
           <ion-label>Iniciar sesión</ion-label>
         </ion-item>
 
-        <ion-item  (click)="cerrarMenu()" routerLink="/home" routerDirection="root">
+        <ion-item 
+          (click)="cerrarMenu()"
+          routerLink="/home"
+          routerLinkActive="selected"
+          [routerLinkActiveOptions]="{ exact: true }">
           <ion-icon name="home-outline" slot="start"></ion-icon>
           <ion-label>Inicio</ion-label>
         </ion-item>
 
-        <ion-item  (click)="cerrarMenu()" routerLink="/admin-alumnos" routerDirection="root">
-          <ion-icon name="home-outline" slot="start"></ion-icon>
+        <ion-item 
+          (click)="cerrarMenu()"
+          routerLink="/admin-alumnos"
+          routerLinkActive="selected">
+          <ion-icon name="people-outline" slot="start"></ion-icon>
           <ion-label>Administrar Alumnos</ion-label>
         </ion-item>
 
-        <ion-item  (click)="cerrarMenu()" routerLink="/admin-actividades" routerDirection="root">
-          <ion-icon name="home-outline" slot="start"></ion-icon>
+        <ion-item 
+          (click)="cerrarMenu()"
+          routerLink="/admin-actividades"
+          routerLinkActive="selected">
+          <ion-icon name="calendar-outline" slot="start"></ion-icon>
           <ion-label>Administrar Actividades</ion-label>
         </ion-item>
 
