@@ -1,8 +1,9 @@
 .toolbar-duoc {
-  --background: #f58220;
+  --background: #111;
   --color: white;
   padding-left: 10px;
   padding-right: 10px;
+  border-bottom: 1px solid rgba(255,255,255,0.1);
 }
 
 .header-contenido {
@@ -42,6 +43,9 @@
   font-weight: 500;
   font-size: 14px;
   text-transform: none;
+  border: 1px solid rgba(255,255,255,0.3);
+  border-radius: 20px;
+  padding: 0 10px;
 }
 
 .logo-duoc {
@@ -78,15 +82,184 @@ ion-toolbar {
 }
 
 /*Tarjetas*/
+.grid-home {
+  padding: 0 8px 24px 8px;
+}
+
 .card-home {
   text-align: center;
+  padding: 20px 10px;
 }
 
 .card-home ion-icon {
   font-size: 40px;
   margin-bottom: 10px;
+  color: #f58220;
 }
 
 .card-home p {
+  margin: 0;
   font-weight: 500;
+  color: #333;
+}
+
+ion-card {
+  border-radius: 16px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+/*Carrusel*/
+.carrusel-wrapper {
+  width: 100%;
+  padding: 12px 12px 0 12px;
+}
+
+.home-swiper {
+  width: 100%;
+  height: 500px;
+  display: block;
+  border-radius: 18px;
+  overflow: hidden;
+
+  --swiper-navigation-color: #ffffff;
+  --swiper-pagination-color: #ffffff;
+  --swiper-pagination-bullet-inactive-color: rgba(255, 255, 255, 0.5);
+}
+
+.home-swiper img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+/*Footer*/
+
+.footer-duoc {
+  background: #111;
+  color: white;
+  margin-top: 40px;
+  padding-top: 50px;
+}
+
+.footer-top {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 40px;
+  padding: 0 32px 40px 32px;
+}
+
+.footer-col h3 {
+  color: #f5b400;
+  font-size: 18px;
+  font-weight: 500;
+  margin-bottom: 8px;
+}
+
+.linea-titulo {
+  width: 100%;
+  height: 2px;
+  background: linear-gradient(to right, #f5b400 35%, #5a4a00 35%);
+  margin-bottom: 24px;
+}
+
+.footer-col h4 {
+  font-size: 16px;
+  font-weight: 600;
+  margin: 18px 0 8px 0;
+  text-transform: uppercase;
+}
+
+.footer-col p,
+.footer-col li,
+.footer-col a {
+  font-size: 14px;
+  color: white;
+  text-decoration: none;
+  line-height: 1.8;
+}
+
+.footer-col ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.footer-col a:hover {
+  text-decoration: underline;
+}
+
+.btn-contacto {
+  --color: white;
+  --border-color: white;
+  --border-radius: 24px;
+  font-size: 13px;
+  margin-bottom: 24px;
+}
+
+.btn-contacto ion-icon {
+  margin-left: 6px;
+}
+
+.footer-bloque {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.4);
+  padding-bottom: 14px;
+  margin-bottom: 18px;
+}
+
+.footer-redes {
+  display: flex;
+  gap: 18px;
+  font-size: 24px;
+  margin-top: 28px;
+}
+
+.footer-redes ion-icon {
+  cursor: pointer;
+}
+
+.mt {
+  margin-top: 34px;
+}
+
+.footer-bottom {
+  border-top: 1px solid rgba(255, 255, 255, 0.35);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 18px 32px;
+  gap: 20px;
+}
+
+.logo-footer {
+  height: 64px;
+  width: auto;
+  object-fit: contain;
+}
+
+.logo-acreditacion {
+  height: 72px;
+  width: auto;
+  object-fit: contain;
+}
+
+/* Responsive */
+@media (max-width: 900px) {
+  .footer-top {
+    grid-template-columns: 1fr;
+    gap: 30px;
+  }
+
+  .footer-bottom {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .logo-footer {
+    height: 54px;
+  }
+
+  .logo-acreditacion {
+    height: 60px;
+  }
 }

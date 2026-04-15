@@ -20,58 +20,146 @@
           Iniciar sesión
         </ion-button>
 
-        <img src="assets/logoDuoc.png" alt="Logo Duoc UC" class="logo-duoc">
+        <img src="assets/logoDuocBlanco.png" alt="Logo Duoc UC" class="logo-duoc">
       </div>
 
     </div>
   </ion-toolbar>
 </ion-header>
 
-<ion-content [fullscreen]="true" class="ion-padding">
-  <div class="contenedor-home">
+<ion-content [fullscreen]="true">
+
+  <div class="carrusel-wrapper">
+    <swiper-container
+      class="home-swiper"
+      navigation="true"
+      pagination="true"
+      loop="true"
+      speed="700"
+      autoplay-delay="4000"
+      autoplay-disable-on-interaction="false"
+    >
+      <swiper-slide>
+        <img src="assets/slide1.jpg" alt="Actividad estudiantil 1">
+      </swiper-slide>
+
+      <swiper-slide>
+        <img src="assets/slide2.jpg" alt="Actividad estudiantil 2">
+      </swiper-slide>
+
+      <swiper-slide>
+        <img src="assets/slide3.jpg" alt="Actividad estudiantil 3">
+      </swiper-slide>
+    </swiper-container>
+  </div>
+
+  <div class="contenedor-home ion-padding">
     <h1>Bienvenido/a</h1>
     <p>Sistema académico Duoc UC</p>
   </div>
+
+  <ion-grid class="grid-home">
+    <ion-row>
+
+      <ion-col size="6">
+        <ion-card routerLink="/puntos">
+          <ion-card-content class="card-home">
+            <ion-icon name="star-outline"></ion-icon>
+            <p>Mis puntos</p>
+          </ion-card-content>
+        </ion-card>
+      </ion-col>
+
+      <ion-col size="6">
+        <ion-card routerLink="/actividades">
+          <ion-card-content class="card-home">
+            <ion-icon name="walk-outline"></ion-icon>
+            <p>Actividades</p>
+          </ion-card-content>
+        </ion-card>
+      </ion-col>
+
+      <ion-col size="6">
+        <ion-card routerLink="/premios">
+          <ion-card-content class="card-home">
+            <ion-icon name="gift-outline"></ion-icon>
+            <p>Premios</p>
+          </ion-card-content>
+        </ion-card>
+      </ion-col>
+
+      <ion-col size="6">
+        <ion-card routerLink="/canje">
+          <ion-card-content class="card-home">
+            <ion-icon name="swap-horizontal-outline"></ion-icon>
+            <p>Canjear</p>
+          </ion-card-content>
+        </ion-card>
+      </ion-col>
+
+    </ion-row>
+  </ion-grid>
+
+  <footer class="footer-duoc">
+
+  <div class="footer-top">
+    <div class="footer-col">
+      <h3>Contáctanos</h3>
+      <div class="linea-titulo"></div>
+
+      <ion-button fill="outline" class="btn-contacto">
+        CONTÁCTANOS
+        <ion-icon name="chevron-forward-outline"></ion-icon>
+      </ion-button>
+
+      <div class="footer-bloque">
+        <h4>MESA DE SERVICIOS</h4>
+        <p>WhatsApp: <a href="#">+56936639565</a></p>
+        <p>Servicios Académicos</p>
+        <p>Servicios de Financiamiento</p>
+        <p>Servicios de Vida Estudiantil</p>
+      </div>
+
+      <div class="footer-redes">
+        <ion-icon name="logo-instagram"></ion-icon>
+        <ion-icon name="logo-youtube"></ion-icon>
+        <ion-icon name="logo-facebook"></ion-icon>
+      </div>
+    </div>
+
+    <div class="footer-col">
+
+      <h3 class="mt">Enlaces de interés</h3>
+      <div class="linea-titulo"></div>
+
+      <ul>
+        <li><a href="#">Prevención y apoyo a víctimas</a></li>
+        <li><a href="#">Redes Sociales Duoc UC</a></li>
+        <li><a href="#">Canal de denuncias y consultas</a></li>
+        <li><a href="#">Políticas de privacidad</a></li>
+      </ul>
+    </div>
+
+    <div class="footer-col">
+      <h3>Nosotros</h3>
+      <div class="linea-titulo"></div>
+
+      <ul>
+        <li><a href="#">Sobre Duoc UC</a></li>
+        <li><a href="#">Vinculación con el medio</a></li>
+        <li><a href="#">Investigación aplicada e innovación</a></li>
+        <li><a href="#">Innovación y emprendimiento estudiantil</a></li>
+        <li><a href="#">Internacionalización</a></li>
+        <li><a href="#">Proyectos y servicios</a></li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="footer-bottom">
+    <img src="assets/logoDuocBlanco.png" alt="Logo Duoc UC" class="logo-footer">
+  </div>
+
+</footer>
+
 </ion-content>
 
-<ion-grid>
-  <ion-row>
-
-    <ion-col size="6">
-      <ion-card routerLink="/puntos">
-        <ion-card-content class="card-home">
-          <ion-icon name="star-outline"></ion-icon>
-          <p>Mis puntos</p>
-        </ion-card-content>
-      </ion-card>
-    </ion-col>
-
-    <ion-col size="6">
-      <ion-card routerLink="/actividades">
-        <ion-card-content class="card-home">
-          <ion-icon name="walk-outline"></ion-icon>
-          <p>Actividades</p>
-        </ion-card-content>
-      </ion-card>
-    </ion-col>
-
-    <ion-col size="6">
-      <ion-card routerLink="/premios">
-        <ion-card-content class="card-home">
-          <ion-icon name="gift-outline"></ion-icon>
-          <p>Premios</p>
-        </ion-card-content>
-      </ion-card>
-    </ion-col>
-
-    <ion-col size="6">
-      <ion-card routerLink="/canje">
-        <ion-card-content class="card-home">
-          <ion-icon name="swap-horizontal-outline"></ion-icon>
-          <p>Canjear</p>
-        </ion-card-content>
-      </ion-card>
-    </ion-col>
-
-  </ion-row>
-</ion-grid>
