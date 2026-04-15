@@ -1,0 +1,155 @@
+.toolbar-duoc {
+  --background: #111;
+  --color: white;
+  padding-left: 10px;
+  padding-right: 10px;
+  border-bottom: 1px solid rgba(255,255,255,0.1);
+}
+
+.header-contenido {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+}
+
+.lado-izquierdo,
+.lado-derecho {
+  display: flex;
+  align-items: center;
+}
+
+.grupo-clima-menu {
+  display: flex;
+  align-items: center;
+  gap: 0;
+}
+
+.clima-box {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  color: white;
+  font-size: 13px;
+  font-weight: 400;
+  background: rgba(255, 255, 255, 0.15);
+  padding: 6px 10px;
+  border-radius: 20px;
+  margin-left: -4px;
+}
+
+.btn-login {
+  --color: white;
+  font-weight: 500;
+  font-size: 14px;
+  text-transform: none;
+  border: 1px solid rgba(255,255,255,0.3);
+  border-radius: 20px;
+  padding: 0 10px;
+}
+
+.logo-duoc {
+  height: 36px;
+  width: auto;
+  object-fit: contain;
+  display: block;
+  margin-left: 8px;
+}
+
+.menu-blanco {
+  --color: white;
+}
+
+.contenedor-home {
+  text-align: center;
+  margin-top: 50px;
+}
+
+h1 {
+  font-size: 28px;
+  font-weight: 600;
+  margin-bottom: 10px;
+}
+
+p {
+  font-size: 16px;
+  font-weight: 300;
+  color: #666;
+}
+
+ion-toolbar {
+  --min-height: 60px;
+}
+
+/* ===== CONTENEDOR ===== */
+
+.login-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100%;
+  padding: 20px;
+}
+
+/* ===== CARD ===== */
+
+.login-card {
+  width: 100%;
+  max-width: 380px;
+  background: #ffffff;
+  border-radius: 18px;
+  padding: 28px 22px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+  text-align: center;
+}
+
+/* ===== TEXTOS ===== */
+
+.login-card h1 {
+  font-size: 24px;
+  font-weight: 600;
+  margin-bottom: 6px;
+}
+
+.login-card p {
+  font-size: 14px;
+  color: #666;
+  margin-bottom: 24px;
+}
+
+/* ===== INPUTS ===== */
+
+.input-item {
+  --background: #f5f5f5;
+  border-radius: 12px;
+  margin-bottom: 14px;
+  --padding-start: 12px;
+}
+
+/* ===== BOTÓN ===== */
+
+.btn-login-main:hover {
+  --background: #111; /* 👈 negro */
+  --color: white;
+  --border-radius: 12px;
+  font-weight: 500;
+  margin-top: 12px;
+  height: 44px;
+}
+
+
+/* ===== EXTRA ===== */
+
+.login-extra {
+  margin-top: 16px;
+}
+
+.login-extra a {
+  font-size: 13px;
+  color: #666;
+  text-decoration: none;
+}
+
+.login-extra a:hover {
+  text-decoration: underline;
+}
