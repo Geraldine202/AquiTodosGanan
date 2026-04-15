@@ -1,0 +1,77 @@
+<ion-header>
+  <ion-toolbar class="toolbar-duoc">
+    <div class="header-contenido">
+
+      <div class="lado-izquierdo">
+        <div class="grupo-clima-menu">
+          <ion-buttons>
+            <ion-menu-button autoHide="false" class="menu-blanco"></ion-menu-button>
+          </ion-buttons>
+
+          <div class="clima-box">
+            <ion-icon name="partly-sunny-outline"></ion-icon>
+            <span>18°C, Puente Alto</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="lado-derecho">
+        <ion-button fill="clear" class="btn-login" routerLink="/login">
+          Iniciar sesión
+        </ion-button>
+
+        <img src="assets/logoDuoc.png" alt="Logo Duoc UC" class="logo-duoc">
+      </div>
+
+    </div>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content [fullscreen]="true" class="ion-padding">
+  <div class="contenedor-home">
+    <h1>Bienvenido/a</h1>
+    <p>Sistema académico Duoc UC</p>
+  </div>
+</ion-content>
+
+<ion-grid>
+  <ion-row>
+
+    <ion-col size="6">
+      <ion-card routerLink="/puntos">
+        <ion-card-content class="card-home">
+          <ion-icon name="star-outline"></ion-icon>
+          <p>Mis puntos</p>
+        </ion-card-content>
+      </ion-card>
+    </ion-col>
+
+    <ion-col size="6">
+      <ion-card routerLink="/actividades">
+        <ion-card-content class="card-home">
+          <ion-icon name="walk-outline"></ion-icon>
+          <p>Actividades</p>
+        </ion-card-content>
+      </ion-card>
+    </ion-col>
+
+    <ion-col size="6">
+      <ion-card routerLink="/premios">
+        <ion-card-content class="card-home">
+          <ion-icon name="gift-outline"></ion-icon>
+          <p>Premios</p>
+        </ion-card-content>
+      </ion-card>
+    </ion-col>
+
+    <ion-col size="6">
+      <ion-card routerLink="/canje">
+        <ion-card-content class="card-home">
+          <ion-icon name="swap-horizontal-outline"></ion-icon>
+          <p>Canjear</p>
+        </ion-card-content>
+      </ion-card>
+    </ion-col>
+
+  </ion-row>
+</ion-grid>

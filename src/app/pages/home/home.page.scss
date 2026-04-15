@@ -1,0 +1,92 @@
+.toolbar-duoc {
+  --background: #f58220;
+  --color: white;
+  padding-left: 10px;
+  padding-right: 10px;
+}
+
+.header-contenido {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+}
+
+.lado-izquierdo,
+.lado-derecho {
+  display: flex;
+  align-items: center;
+}
+
+.grupo-clima-menu {
+  display: flex;
+  align-items: center;
+  gap: 0;
+}
+
+.clima-box {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  color: white;
+  font-size: 13px;
+  font-weight: 400;
+  background: rgba(255, 255, 255, 0.15);
+  padding: 6px 10px;
+  border-radius: 20px;
+  margin-left: -4px;
+}
+
+.btn-login {
+  --color: white;
+  font-weight: 500;
+  font-size: 14px;
+  text-transform: none;
+}
+
+.logo-duoc {
+  height: 36px;
+  width: auto;
+  object-fit: contain;
+  display: block;
+  margin-left: 8px;
+}
+
+.menu-blanco {
+  --color: white;
+}
+
+.contenedor-home {
+  text-align: center;
+  margin-top: 50px;
+}
+
+h1 {
+  font-size: 28px;
+  font-weight: 600;
+  margin-bottom: 10px;
+}
+
+p {
+  font-size: 16px;
+  font-weight: 300;
+  color: #666;
+}
+
+ion-toolbar {
+  --min-height: 60px;
+}
+
+/*Tarjetas*/
+.card-home {
+  text-align: center;
+}
+
+.card-home ion-icon {
+  font-size: 40px;
+  margin-bottom: 10px;
+}
+
+.card-home p {
+  font-weight: 500;
+}
