@@ -1,32 +1,26 @@
 <ion-header>
   <ion-toolbar class="toolbar-duoc">
     <div class="header-contenido">
-
       <div class="lado-izquierdo">
         <div class="grupo-clima-menu">
           <ion-buttons>
             <ion-menu-button autoHide="false" class="menu-blanco"></ion-menu-button>
           </ion-buttons>
-
           <div class="clima-box">
             <ion-icon name="partly-sunny-outline"></ion-icon>
             <span>18°C, Puente Alto</span>
           </div>
         </div>
       </div>
-
       <div class="lado-derecho">
         <img src="assets/logoDuocBlanco.png" alt="Logo Duoc UC" class="logo-duoc">
       </div>
-
     </div>
   </ion-toolbar>
 </ion-header>
 
 <ion-content [fullscreen]="true">
-
   <div class="container">
-
     <ion-item class="search-bar">
       <ion-icon name="search-outline" slot="start"></ion-icon>
       <ion-input placeholder="Buscar alumno..."></ion-input>
@@ -36,33 +30,31 @@
       Agregar Alumno
     </ion-button>
 
-    <ion-card class="card-item">
+    <ion-card class="card-item" *ngFor="let alu of alumnos">
       <ion-card-content>
-
         <div class="fila-superior">
           <div>
-            <h2>Juan Pérez</h2>
-            <p>Ingeniería en Informática</p>
+            <h2>{{ alu.nombre_completo }}</h2>
+            <p>RUT: {{ alu.rut_usuario }}</p>
           </div>
-          <span class="estado activo">Activo</span>
+          <span class="estado" [ngClass]="alu.id_estado_matricula === 1 ? 'activo' : 'suspendido'">
+            {{ alu.id_estado_matricula === 1 ? 'Activo' : 'Suspendido' }}
+          </span>
         </div>
 
-        <div class="acciones">
-          <ion-button fill="outline" size="small" class="btn-editar" id="open-modal-editar-1">
-            Editar
-          </ion-button>
+      <div class="acciones">
+        <ion-button fill="outline" size="small" class="btn-editar" (click)="prepararEdicion(alu)">
+          Editar
+        </ion-button>
 
-          <ion-button fill="solid" size="small" color="danger">
-            Eliminar
-          </ion-button>
-        </div>
-
+        <ion-button fill="solid" size="small" color="danger" (click)="eliminarAlumno(alu.rut_usuario)">
+          Eliminar
+        </ion-button>
+      </div>
       </ion-card-content>
     </ion-card>
-
   </div>
 
-  <!-- MODAL AGREGAR -->
   <ion-modal #modalAgregar trigger="open-modal-agregar">
     <ng-template>
       <ion-header>
@@ -76,20 +68,19 @@
 
       <ion-content class="modal-content">
         <div class="formulario-modal">
-
           <ion-item class="input-modal">
             <ion-label position="stacked">RUT</ion-label>
-            <ion-input placeholder="Ej: 11.111.111-1"></ion-input>
+            <ion-input [(ngModel)]="nuevoAlumno.rut_usuario" placeholder="Ej: 11.111.111-1"></ion-input>
           </ion-item>
 
           <ion-item class="input-modal">
             <ion-label position="stacked">Nombre completo</ion-label>
-            <ion-input placeholder="Ej: Juan Pérez"></ion-input>
+            <ion-input [(ngModel)]="nuevoAlumno.nombre_completo" placeholder="Ej: Juan Pérez"></ion-input>
           </ion-item>
 
           <ion-item class="input-modal">
             <ion-label position="stacked">Género</ion-label>
-            <ion-select placeholder="Selecciona un Género">
+            <ion-select [(ngModel)]="nuevoAlumno.genero" placeholder="Selecciona un Género">
               <ion-select-option value="Femenino">Femenino</ion-select-option>
               <ion-select-option value="Masculino">Masculino</ion-select-option>
               <ion-select-option value="Otro">Otro</ion-select-option>
@@ -98,116 +89,76 @@
 
           <ion-item class="input-modal">
             <ion-label position="stacked">Correo</ion-label>
-            <ion-input placeholder="Ej: juan@duocuc.cl"></ion-input>
+            <ion-input [(ngModel)]="nuevoAlumno.correo" type="email" placeholder="Ej: juan@duocuc.cl"></ion-input>
           </ion-item>
 
           <ion-item class="input-modal">
             <ion-label position="stacked">Sede</ion-label>
-            <ion-select placeholder="Selecciona una Sede">
-              <ion-select-option value="Puente Alto">Puente Alto</ion-select-option>
-              <ion-select-option value="Alameda">Alameda</ion-select-option>
-              <ion-select-option value="Maipú">Maipú</ion-select-option>
-            </ion-select>
-          </ion-item>
-
-          <ion-item class="input-modal">
-            <ion-label position="stacked">Carrera</ion-label>
-            <ion-select placeholder="Selecciona una Carrera">
-              <ion-select-option value="Ing. en Informática">Ing. en Informática</ion-select-option>
-              <ion-select-option value="Contabilidad">Contabilidad</ion-select-option>
-              <ion-select-option value="Administración">Administración</ion-select-option>
-            </ion-select>
-          </ion-item>
-
-          <ion-item class="input-modal">
-            <ion-label position="stacked">Jornada</ion-label>
-            <ion-select placeholder="Selecciona una Jornada">
-              <ion-select-option value="Diurno">Diurno</ion-select-option>
-              <ion-select-option value="Vespertino">Vespertino</ion-select-option>
+            <ion-select [(ngModel)]="nuevoAlumno.id_sede" placeholder="Selecciona una Sede">
+              <ion-select-option [value]="1">Puente Alto</ion-select-option>
+              <ion-select-option [value]="2">Alameda</ion-select-option>
+              <ion-select-option [value]="3">Maipú</ion-select-option>
             </ion-select>
           </ion-item>
 
           <ion-item class="input-modal">
             <ion-label position="stacked">Dirección</ion-label>
-            <ion-input placeholder="Ej: Los Toros 111"></ion-input>
+            <ion-input [(ngModel)]="nuevoAlumno.direccion" placeholder="Ej: Los Toros 111"></ion-input>
           </ion-item>
 
           <ion-item class="input-modal">
             <ion-label position="stacked">Teléfono</ion-label>
-            <ion-input placeholder="Ej: 911111111"></ion-input>
+            <ion-input [(ngModel)]="nuevoAlumno.telefono" type="number" placeholder="Ej: 911111111"></ion-input>
           </ion-item>
 
           <ion-item class="input-modal">
             <ion-label position="stacked">Fecha Nacimiento</ion-label>
-            <ion-input placeholder="Ej: 14/06/2004"></ion-input>
+            <ion-input [(ngModel)]="nuevoAlumno.fecha_nacimiento" type="date"></ion-input>
           </ion-item>
 
-          <ion-item class="input-modal">
-            <ion-label position="stacked">Estado</ion-label>
-            <ion-select placeholder="Selecciona un estado">
-              <ion-select-option value="activo">Activo</ion-select-option>
-              <ion-select-option value="suspendido">Suspendido</ion-select-option>
-            </ion-select>
-          </ion-item>
-
-          <ion-item class="input-modal">
-            <ion-label position="stacked">Tipo Alumno</ion-label>
-            <ion-select placeholder="Selecciona un Rol">
-              <ion-select-option value="Alumno">Alumno</ion-select-option>
-              <ion-select-option value="Encargado de Actividades">Encargado de Actividades</ion-select-option>
-              <ion-select-option value="Encargado de Premios">Encargado de Premios</ion-select-option>
-
-            </ion-select>
-          </ion-item>
-
-          <ion-button expand="block" class="btn-guardar-modal" (click)="modalAgregar.dismiss()">
+          <ion-button expand="block" class="btn-guardar-modal" (click)="agregarAlumno(); modalAgregar.dismiss()">
             Guardar Alumno
           </ion-button>
-
         </div>
       </ion-content>
     </ng-template>
   </ion-modal>
 
-  <!-- MODAL EDITAR -->
-  <ion-modal #modalEditar1 trigger="open-modal-editar-1">
-    <ng-template>
-      <ion-header>
-        <ion-toolbar class="modal-toolbar">
-          <ion-title>Editar Alumno</ion-title>
-          <ion-buttons slot="end">
-            <ion-button (click)="modalEditar1.dismiss()">Cancelar</ion-button>
-          </ion-buttons>
-        </ion-toolbar>
-      </ion-header>
+<ion-modal #modalEditar1> <ng-template>
+    <ion-header>
+      <ion-toolbar class="modal-toolbar">
+        <ion-title>Editar Alumno</ion-title>
+        <ion-buttons slot="end">
+          <ion-button (click)="modalEditar1.dismiss()">Cancelar</ion-button>
+        </ion-buttons>
+      </ion-toolbar>
+    </ion-header>
 
-      <ion-content class="modal-content">
-        <div class="formulario-modal">
+    <ion-content class="modal-content">
+      <div class="formulario-modal" *ngIf="alumnoSeleccionado">
+        <ion-item class="input-modal">
+          <ion-label position="stacked">Nombre completo</ion-label>
+          <ion-input [(ngModel)]="alumnoSeleccionado.nombre_completo"></ion-input>
+        </ion-item>
 
-          <ion-item class="input-modal">
-            <ion-label position="stacked">Nombre completo</ion-label>
-            <ion-input value="Juan Pérez"></ion-input>
-          </ion-item>
+        <ion-item class="input-modal">
+          <ion-label position="stacked">Dirección</ion-label>
+          <ion-input [(ngModel)]="alumnoSeleccionado.direccion"></ion-input>
+        </ion-item>
 
-          <ion-item class="input-modal">
-            <ion-label position="stacked">Carrera</ion-label>
-            <ion-input value="Ingeniería en Informática"></ion-input>
-          </ion-item>
+        <ion-item class="input-modal">
+          <ion-label position="stacked">Estado</ion-label>
+          <ion-select [(ngModel)]="alumnoSeleccionado.id_estado_matricula">
+            <ion-select-option [value]="1">Activo</ion-select-option>
+            <ion-select-option [value]="2">Suspendido</ion-select-option>
+          </ion-select>
+        </ion-item>
 
-          <ion-item class="input-modal">
-            <ion-label position="stacked">Estado</ion-label>
-            <ion-select value="activo">
-              <ion-select-option value="activo">Activo</ion-select-option>
-              <ion-select-option value="suspendido">Suspendido</ion-select-option>
-            </ion-select>
-          </ion-item>
-
-          <ion-button expand="block" class="btn-guardar-modal" (click)="modalEditar1.dismiss()">
-            Guardar Cambios
-          </ion-button>
-
-        </div>
-      </ion-content>
-    </ng-template>
-  </ion-modal>
+        <ion-button expand="block" class="btn-guardar-modal" (click)="actualizarAlumno()">
+          Guardar Cambios
+        </ion-button>
+      </div>
+    </ion-content>
+  </ng-template>
+</ion-modal>
 </ion-content>
