@@ -21,36 +21,59 @@
 
 <ion-content [fullscreen]="true">
   <div class="container">
-    <ion-item class="search-bar">
-      <ion-icon name="search-outline" slot="start"></ion-icon>
-      <ion-input placeholder="Buscar alumno..."></ion-input>
-    </ion-item>
+    
+    <div class="search-wrapper">
+      <ion-item lines="none" class="search-bar">
+        <ion-icon name="search-outline" slot="start"></ion-icon>
+        <ion-input 
+          placeholder="Buscar alumno por nombre o RUT..." 
+          [(ngModel)]="textoBuscar"
+          (ionInput)="filtrarAlumnos()">
+        </ion-input>
+      </ion-item>
+    </div>
 
-    <ion-button expand="block" class="btn-agregar" id="open-modal-agregar">
-      Agregar Alumno
+    <ion-button expand="block" class="btn-agregar" id="open-modal-agregar" (click)="resetForm()">
+      <ion-icon name="person-add-outline" slot="start"></ion-icon>
+      Agregar Nuevo Alumno
     </ion-button>
 
-    <ion-card class="card-item" *ngFor="let alu of alumnos">
+    <ion-card class="card-item" *ngFor="let alu of alumnosFiltrados">
       <ion-card-content>
-        <div class="fila-superior">
-          <div>
-            <h2>{{ alu.nombre_completo }}</h2>
-            <p>RUT: {{ alu.rut_usuario }}</p>
+        <div class="card-cuerpo">
+          
+          <div class="avatar-container">
+            <img [src]="alu.imagen ? alu.imagen : 'assets/usuario.webp'" alt="Avatar" class="alumno-avatar">
           </div>
-          <span class="estado" [ngClass]="alu.id_estado_matricula === 1 ? 'activo' : 'suspendido'">
-            {{ alu.id_estado_matricula === 1 ? 'Activo' : 'Suspendido' }}
-          </span>
+
+          <div class="info-container">
+            <div class="fila-superior">
+              <div class="datos-principales">
+                <h2>{{ alu.nombre_completo }}</h2>
+                <p class="rut-text"><ion-icon name="card-outline"></ion-icon> {{ alu.rut_usuario }}</p>
+              </div>
+              <span class="estado-badge" [ngClass]="alu.id_estado_matricula === 1 ? 'activo' : 'suspendido'">
+                <span class="punto-indicador"></span>
+                {{ alu.id_estado_matricula === 1 ? 'Activo' : 'Suspendido' }}
+              </span>
+            </div>
+            
+            <hr class="divisor-tarjeta">
+
+            <div class="acciones">
+              <ion-button fill="clear" size="small" class="btn-editar" (click)="prepararEdicion(alu)">
+                <ion-icon name="create-outline" slot="start"></ion-icon>
+                Editar
+              </ion-button>
+
+              <ion-button fill="clear" size="small" color="danger" class="btn-eliminar" (click)="eliminarAlumno(alu.rut_usuario)">
+                <ion-icon name="trash-outline" slot="start"></ion-icon>
+                Eliminar
+              </ion-button>
+            </div>
+          </div>
+
         </div>
-
-      <div class="acciones">
-        <ion-button fill="outline" size="small" class="btn-editar" (click)="prepararEdicion(alu)">
-          Editar
-        </ion-button>
-
-        <ion-button fill="solid" size="small" color="danger" (click)="eliminarAlumno(alu.rut_usuario)">
-          Eliminar
-        </ion-button>
-      </div>
       </ion-card-content>
     </ion-card>
   </div>
@@ -59,64 +82,77 @@
     <ng-template>
       <ion-header>
         <ion-toolbar class="modal-toolbar">
-          <ion-title>Agregar Alumno</ion-title>
+          <ion-title>Registrar Alumno</ion-title>
           <ion-buttons slot="end">
-            <ion-button (click)="modalAgregar.dismiss()">Cancelar</ion-button>
+            <ion-button (click)="modalAgregar.dismiss()" color="light">Cancelar</ion-button>
           </ion-buttons>
         </ion-toolbar>
       </ion-header>
 
       <ion-content class="modal-content">
         <div class="formulario-modal">
-          <ion-item class="input-modal">
+          
+          <div class="upload-avatar-section">
+            <div class="preview-uploader">
+              <img [src]="imagenPreview ? imagenPreview : 'assets/usuario.webp'" class="preview-img" alt="Previsualización">
+            </div>
+            <input type="file" id="file-input" accept="image/*" (change)="onFileSelected($event)" style="display: none;">
+            <ion-button fill="outline" size="small" color="secondary" onclick="document.getElementById('file-input').click()">
+              <ion-icon name="camera-outline" slot="start"></ion-icon>
+              {{ imagenPreview ? 'Cambiar Foto (Opcional)' : 'Subir Foto (Opcional)' }}
+            </ion-button>
+          </div>
+
+          <ion-item class="input-modal" lines="none">
             <ion-label position="stacked">RUT</ion-label>
-            <ion-input [(ngModel)]="nuevoAlumno.rut_usuario" placeholder="Ej: 11.111.111-1"></ion-input>
+            <ion-input [(ngModel)]="nuevoAlumno.rut_usuario" placeholder="11.111.111-1"></ion-input>
           </ion-item>
 
-          <ion-item class="input-modal">
+          <ion-item class="input-modal" lines="none">
             <ion-label position="stacked">Nombre completo</ion-label>
-            <ion-input [(ngModel)]="nuevoAlumno.nombre_completo" placeholder="Ej: Juan Pérez"></ion-input>
+            <ion-input [(ngModel)]="nuevoAlumno.nombre_completo" placeholder="Juan Pérez Solís"></ion-input>
           </ion-item>
 
-          <ion-item class="input-modal">
+          <ion-item class="input-modal" lines="none">
             <ion-label position="stacked">Género</ion-label>
-            <ion-select [(ngModel)]="nuevoAlumno.genero" placeholder="Selecciona un Género">
+            <ion-select [(ngModel)]="nuevoAlumno.genero" placeholder="Selecciona género" interface="popover">
               <ion-select-option value="Femenino">Femenino</ion-select-option>
               <ion-select-option value="Masculino">Masculino</ion-select-option>
               <ion-select-option value="Otro">Otro</ion-select-option>
             </ion-select>
           </ion-item>
 
-          <ion-item class="input-modal">
-            <ion-label position="stacked">Correo</ion-label>
-            <ion-input [(ngModel)]="nuevoAlumno.correo" type="email" placeholder="Ej: juan@duocuc.cl"></ion-input>
+          <ion-item class="input-modal" lines="none">
+            <ion-label position="stacked">Correo Electrónico</ion-label>
+            <ion-input [(ngModel)]="nuevoAlumno.correo" type="email" placeholder="juan@duocuc.cl"></ion-input>
           </ion-item>
 
-          <ion-item class="input-modal">
+          <ion-item class="input-modal" lines="none">
             <ion-label position="stacked">Sede</ion-label>
-            <ion-select [(ngModel)]="nuevoAlumno.id_sede" placeholder="Selecciona una Sede">
+            <ion-select [(ngModel)]="nuevoAlumno.id_sede" placeholder="Selecciona sede" interface="popover">
               <ion-select-option [value]="1">Puente Alto</ion-select-option>
               <ion-select-option [value]="2">Alameda</ion-select-option>
               <ion-select-option [value]="3">Maipú</ion-select-option>
             </ion-select>
           </ion-item>
 
-          <ion-item class="input-modal">
+          <ion-item class="input-modal" lines="none">
             <ion-label position="stacked">Dirección</ion-label>
-            <ion-input [(ngModel)]="nuevoAlumno.direccion" placeholder="Ej: Los Toros 111"></ion-input>
+            <ion-input [(ngModel)]="nuevoAlumno.direccion" placeholder="Ej: Av. Concha y Toro 1400"></ion-input>
           </ion-item>
 
-          <ion-item class="input-modal">
+          <ion-item class="input-modal" lines="none">
             <ion-label position="stacked">Teléfono</ion-label>
-            <ion-input [(ngModel)]="nuevoAlumno.telefono" type="number" placeholder="Ej: 911111111"></ion-input>
+            <ion-input [(ngModel)]="nuevoAlumno.telefono" type="number" placeholder="912345678"></ion-input>
           </ion-item>
 
-          <ion-item class="input-modal">
+          <ion-item class="input-modal" lines="none">
             <ion-label position="stacked">Fecha Nacimiento</ion-label>
             <ion-input [(ngModel)]="nuevoAlumno.fecha_nacimiento" type="date"></ion-input>
           </ion-item>
 
-          <ion-button expand="block" class="btn-guardar-modal" (click)="agregarAlumno(); modalAgregar.dismiss()">
+          <ion-button expand="block" class="btn-guardar-modal" (click)="agregarAlumno()">
+            <ion-icon name="checkmark-circle-outline" slot="start"></ion-icon>
             Guardar Alumno
           </ion-button>
         </div>
@@ -124,41 +160,55 @@
     </ng-template>
   </ion-modal>
 
-<ion-modal #modalEditar1> <ng-template>
-    <ion-header>
-      <ion-toolbar class="modal-toolbar">
-        <ion-title>Editar Alumno</ion-title>
-        <ion-buttons slot="end">
-          <ion-button (click)="modalEditar1.dismiss()">Cancelar</ion-button>
-        </ion-buttons>
-      </ion-toolbar>
-    </ion-header>
+  <ion-modal #modalEditar1> 
+    <ng-template>
+      <ion-header>
+        <ion-toolbar class="modal-toolbar">
+          <ion-title>Modificar Datos</ion-title>
+          <ion-buttons slot="end">
+            <ion-button (click)="modalEditar1.dismiss()" color="light">Cancelar</ion-button>
+          </ion-buttons>
+        </ion-toolbar>
+      </ion-header>
 
-    <ion-content class="modal-content">
-      <div class="formulario-modal" *ngIf="alumnoSeleccionado">
-        <ion-item class="input-modal">
-          <ion-label position="stacked">Nombre completo</ion-label>
-          <ion-input [(ngModel)]="alumnoSeleccionado.nombre_completo"></ion-input>
-        </ion-item>
+      <ion-content class="modal-content">
+        <div class="formulario-modal" *ngIf="alumnoSeleccionado">
+          
+          <div class="upload-avatar-section">
+            <div class="preview-uploader">
+              <img [src]="imagenPreview ? imagenPreview : (alumnoSeleccionado.imagen ? alumnoSeleccionado.imagen : 'assets/usuario.webp')" class="preview-img" alt="Previsualización">
+            </div>
+            <input type="file" id="file-edit-input" accept="image/*" (change)="onFileSelected($event)" style="display: none;">
+            <ion-button fill="outline" size="small" color="secondary" onclick="document.getElementById('file-edit-input').click()">
+              <ion-icon name="camera-outline" slot="start"></ion-icon>
+              Cambiar Foto
+            </ion-button>
+          </div>
 
-        <ion-item class="input-modal">
-          <ion-label position="stacked">Dirección</ion-label>
-          <ion-input [(ngModel)]="alumnoSeleccionado.direccion"></ion-input>
-        </ion-item>
+          <ion-item class="input-modal" lines="none">
+            <ion-label position="stacked">Nombre completo</ion-label>
+            <ion-input [(ngModel)]="alumnoSeleccionado.nombre_completo"></ion-input>
+          </ion-item>
 
-        <ion-item class="input-modal">
-          <ion-label position="stacked">Estado</ion-label>
-          <ion-select [(ngModel)]="alumnoSeleccionado.id_estado_matricula">
-            <ion-select-option [value]="1">Activo</ion-select-option>
-            <ion-select-option [value]="2">Suspendido</ion-select-option>
-          </ion-select>
-        </ion-item>
+          <ion-item class="input-modal" lines="none">
+            <ion-label position="stacked">Dirección</ion-label>
+            <ion-input [(ngModel)]="alumnoSeleccionado.direccion"></ion-input>
+          </ion-item>
 
-        <ion-button expand="block" class="btn-guardar-modal" (click)="actualizarAlumno()">
-          Guardar Cambios
-        </ion-button>
-      </div>
-    </ion-content>
-  </ng-template>
-</ion-modal>
+          <ion-item class="input-modal" lines="none">
+            <ion-label position="stacked">Estado Matrícula</ion-label>
+            <ion-select [(ngModel)]="alumnoSeleccionado.id_estado_matricula" interface="popover">
+              <ion-select-option [value]="1">Activo</ion-select-option>
+              <ion-select-option [value]="2">Suspendido</ion-select-option>
+            </ion-select>
+          </ion-item>
+
+          <ion-button expand="block" class="btn-guardar-modal" (click)="actualizarAlumno()">
+            <ion-icon name="save-outline" slot="start"></ion-icon>
+            Guardar Cambios
+          </ion-button>
+        </div>
+      </ion-content>
+    </ng-template>
+  </ion-modal>
 </ion-content>

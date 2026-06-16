@@ -1,14 +1,11 @@
-
 <ion-header>
   <ion-toolbar class="toolbar-duoc">
     <div class="header-contenido">
-
       <div class="lado-izquierdo">
         <div class="grupo-clima-menu">
           <ion-buttons>
             <ion-menu-button autoHide="false" class="menu-blanco"></ion-menu-button>
           </ion-buttons>
-
           <div class="clima-box">
             <ion-icon name="partly-sunny-outline"></ion-icon>
             <span>18°C, Puente Alto</span>
@@ -22,11 +19,8 @@
   </ion-toolbar>
 </ion-header>
 
-
 <ion-content [fullscreen]="true" class="login-content ion-no-padding">
-
   <div class="login-container">
-
     <div class="login-card">
 
       <h1>Bienvenido</h1>
@@ -34,15 +28,15 @@
 
       <ion-item class="input-item">
         <ion-icon name="person-outline" slot="start"></ion-icon>
-        <ion-input placeholder="Correo Institucional"></ion-input>
+        <ion-input type="email" placeholder="Correo Institucional" [(ngModel)]="credenciales.correo"></ion-input>
       </ion-item>
 
       <ion-item class="input-item">
         <ion-icon name="lock-closed-outline" slot="start"></ion-icon>
-        <ion-input type="password" placeholder="Contraseña"></ion-input>
+        <ion-input type="password" placeholder="Contraseña" [(ngModel)]="credenciales.password"></ion-input>
       </ion-item>
 
-      <ion-button expand="block" color="warning" class="btn-login-main" routerLink="/home">
+      <ion-button expand="block" color="warning" class="btn-login-main" (click)="iniciarSesion()">
         Ingresar
       </ion-button>
 
@@ -51,7 +45,5 @@
       </div>
 
     </div>
-
   </div>
-
 </ion-content>
