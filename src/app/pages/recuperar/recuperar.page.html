@@ -1,0 +1,101 @@
+<ion-header class="ion-no-border">
+  <ion-toolbar class="toolbar-duoc">
+    <ion-buttons slot="start">
+      <ion-back-button defaultHref="/login" class="btn-menu-blanco"></ion-back-button>
+    </ion-buttons>
+    <ion-title style="color: #ffffff; font-size: 1rem;">Recuperar Contraseña</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content style="--background: #f4f5f8;">
+  <div style="padding: 24px; display: flex; flex-direction: column; gap: 20px; max-width: 500px; margin: 0 auto;">
+
+    <!-- Card explicativa -->
+    <ion-card style="margin: 0; border-radius: 14px; box-shadow: 0 4px 12px rgba(0,0,0,0.05);">
+      <ion-card-content style="text-align: center; padding: 24px 16px;">
+        <ion-icon name="key-outline" style="font-size: 3rem; color: #001e36; margin-bottom: 10px;"></ion-icon>
+        <h2 style="color: #001e36; font-weight: bold; margin-bottom: 8px; font-size: 1.2rem;">Recupera tu acceso</h2>
+        <p style="color: #6b7280; font-size: 0.9rem; line-height: 1.4;" *ngIf="paso === 1">
+          Ingresa tu correo institucional registrado para enviarte un código de recuperación.
+        </p>
+        <p style="color: #6b7280; font-size: 0.9rem; line-height: 1.4;" *ngIf="paso === 2">
+          Ingresa el código que enviamos a tu correo y tu nueva contraseña.
+        </p>
+      </ion-card-content>
+    </ion-card>
+
+    <!-- PASO 1: PEDIR CORREO -->
+    <ng-container *ngIf="paso === 1">
+      <ion-item 
+        lines="outline" 
+        style="--border-radius: 10px; --background: #ffffff; --padding-start: 16px; --padding-end: 16px; --inner-padding-end: 0; min-height: 64px;">
+        <ion-icon name="mail-outline" slot="start" style="color: #001e36; font-size: 1.3rem; margin-end: 12px;"></ion-icon>
+        <ion-input 
+          type="email" 
+          [(ngModel)]="correo" 
+          label="ejemplo@duocuc.cl" 
+          label-placement="floating" 
+          placeholder="ejemplo@duocuc.cl"
+          style="font-size: 0.95rem; --padding-top: 8px; --padding-bottom: 8px;">
+        </ion-input>
+      </ion-item>
+
+      <ion-button 
+        expand="block" 
+        (click)="solicitarCodigo()"
+        style="--background: #001e36; --color: #ffffff; --border-radius: 10px; font-weight: bold; height: 50px; margin-top: 10px; font-size: 0.95rem;">
+        Solicitar código
+      </ion-button>
+    </ng-container>
+
+    <!-- PASO 2: INGRESAR TOKEN Y NUEVA CLAVE -->
+    <ng-container *ngIf="paso === 2">
+      <div style="display: flex; flex-direction: column; gap: 16px;">
+        <ion-item 
+          lines="outline" 
+          style="--border-radius: 10px; --background: #ffffff; --padding-start: 16px; --padding-end: 16px; --inner-padding-end: 0; min-height: 64px;">
+          <ion-icon name="lock-closed-outline" slot="start" style="color: #001e36; font-size: 1.3rem; margin-end: 12px;"></ion-icon>
+          <ion-input 
+            type="text" 
+            maxlength="6" 
+            [(ngModel)]="token" 
+            label="Código de 6 dígitos" 
+            label-placement="floating" 
+            placeholder="123456"
+            style="font-size: 0.95rem; --padding-top: 8px; --padding-bottom: 8px;">
+          </ion-input>
+        </ion-item>
+
+        <ion-item 
+          lines="outline" 
+          style="--border-radius: 10px; --background: #ffffff; --padding-start: 16px; --padding-end: 16px; --inner-padding-end: 0; min-height: 64px;">
+          <ion-icon name="key-outline" slot="start" style="color: #001e36; font-size: 1.3rem; margin-end: 12px;"></ion-icon>
+          <ion-input 
+            type="password" 
+            [(ngModel)]="nuevaContrasenia" 
+            label="Nueva Contraseña" 
+            label-placement="floating" 
+            placeholder="••••••••"
+            style="font-size: 0.95rem; --padding-top: 8px; --padding-bottom: 8px;">
+          </ion-input>
+        </ion-item>
+      </div>
+
+      <ion-button 
+        expand="block" 
+        (click)="cambiarContrasenia()"
+        style="--background: #001e36; --color: #ffffff; --border-radius: 10px; font-weight: bold; height: 50px; margin-top: 10px; font-size: 0.95rem;">
+        Cambiar Contraseña
+      </ion-button>
+      
+      <ion-button 
+        expand="block" 
+        fill="clear" 
+        (click)="paso = 1"
+        style="--color: #6b7280; font-size: 0.85rem; margin-top: -5px;">
+        Volver a intentar con otro correo
+      </ion-button>
+    </ng-container>
+
+  </div>
+</ion-content>

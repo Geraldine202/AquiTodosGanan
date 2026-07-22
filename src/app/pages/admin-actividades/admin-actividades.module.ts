@@ -7,13 +7,17 @@ import { IonicModule } from '@ionic/angular';
 import { AdminActividadesPageRoutingModule } from './admin-actividades-routing.module';
 
 import { AdminActividadesPage } from './admin-actividades.page';
+import { FooterComponent } from 'src/app/components/footer/footer.component';
+import { HeaderComponent } from 'src/app/components/header/header.component';
 
 @NgModule({
   imports: [
     CommonModule,
     FormsModule,
     IonicModule,
-    AdminActividadesPageRoutingModule
+    AdminActividadesPageRoutingModule,
+    FooterComponent,
+    HeaderComponent
   ],
   declarations: [AdminActividadesPage]
 })

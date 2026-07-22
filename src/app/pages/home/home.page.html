@@ -1,31 +1,4 @@
-<ion-header>
-  <ion-toolbar class="toolbar-duoc">
-    <div class="header-contenido">
-
-      <div class="lado-izquierdo">
-        <div class="grupo-clima-menu">
-          <ion-buttons>
-            <ion-menu-button autoHide="false" class="menu-blanco"></ion-menu-button>
-          </ion-buttons>
-
-          <div class="clima-box">
-            <ion-icon name="partly-sunny-outline"></ion-icon>
-            <span>18°C, Puente Alto</span>
-          </div>
-        </div>
-      </div>
-
-      <div class="lado-derecho">
-        <ion-button fill="clear" class="btn-login" routerLink="/login">
-          Iniciar sesión
-        </ion-button>
-
-        <img src="assets/logoDuocBlanco.png" alt="Logo Duoc UC" class="logo-duoc">
-      </div>
-
-    </div>
-  </ion-toolbar>
-</ion-header>
+<app-header></app-header>
 
 <ion-content [fullscreen]="true">
 
@@ -99,67 +72,5 @@
 
     </ion-row>
   </ion-grid>
-
-  <footer class="footer-duoc">
-
-  <div class="footer-top">
-    <div class="footer-col">
-      <h3>Contáctanos</h3>
-      <div class="linea-titulo"></div>
-
-      <ion-button fill="outline" class="btn-contacto">
-        CONTÁCTANOS
-        <ion-icon name="chevron-forward-outline"></ion-icon>
-      </ion-button>
-
-      <div class="footer-bloque">
-        <h4>MESA DE SERVICIOS</h4>
-        <p>WhatsApp: <a href="#">+56936639565</a></p>
-        <p>Servicios Académicos</p>
-        <p>Servicios de Financiamiento</p>
-        <p>Servicios de Vida Estudiantil</p>
-      </div>
-
-      <div class="footer-redes">
-        <ion-icon name="logo-instagram"></ion-icon>
-        <ion-icon name="logo-youtube"></ion-icon>
-        <ion-icon name="logo-facebook"></ion-icon>
-      </div>
-    </div>
-
-    <div class="footer-col">
-
-      <h3 class="mt">Enlaces de interés</h3>
-      <div class="linea-titulo"></div>
-
-      <ul>
-        <li><a href="#">Prevención y apoyo a víctimas</a></li>
-        <li><a href="#">Redes Sociales Duoc UC</a></li>
-        <li><a href="#">Canal de denuncias y consultas</a></li>
-        <li><a href="#">Políticas de privacidad</a></li>
-      </ul>
-    </div>
-
-    <div class="footer-col">
-      <h3>Nosotros</h3>
-      <div class="linea-titulo"></div>
-
-      <ul>
-        <li><a href="#">Sobre Duoc UC</a></li>
-        <li><a href="#">Vinculación con el medio</a></li>
-        <li><a href="#">Investigación aplicada e innovación</a></li>
-        <li><a href="#">Innovación y emprendimiento estudiantil</a></li>
-        <li><a href="#">Internacionalización</a></li>
-        <li><a href="#">Proyectos y servicios</a></li>
-      </ul>
-    </div>
-  </div>
-
-  <div class="footer-bottom">
-    <img src="assets/logoDuocBlanco.png" alt="Logo Duoc UC" class="logo-footer">
-  </div>
-
-</footer>
-
+  <app-footer></app-footer>
 </ion-content>
-

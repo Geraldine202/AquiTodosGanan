@@ -1,27 +1,4 @@
-<ion-header>
-  <ion-toolbar class="toolbar-duoc">
-    <div class="header-contenido">
-
-      <div class="lado-izquierdo">
-        <div class="grupo-clima-menu">
-          <ion-buttons>
-            <ion-menu-button autoHide="false" class="menu-blanco"></ion-menu-button>
-          </ion-buttons>
-
-          <div class="clima-box">
-            <ion-icon name="partly-sunny-outline"></ion-icon>
-            <span>18°C, Puente Alto</span>
-          </div>
-        </div>
-      </div>
-
-      <div class="lado-derecho">
-        <img src="assets/logoDuocBlanco.png" alt="Logo Duoc UC" class="logo-duoc">
-      </div>
-
-    </div>
-  </ion-toolbar>
-</ion-header>
+<app-header></app-header>
 
 <ion-content [fullscreen]="true">
 
@@ -167,4 +144,5 @@
       </ion-content>
     </ng-template>
   </ion-modal>
+  <app-footer></app-footer>
 </ion-content>

@@ -1,12 +1,15 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable } from 'rxjs';
+import { Observable, BehaviorSubject } from 'rxjs';
 
 @Injectable({ providedIn: 'root' })
 export class AlumnoService {
   private apiUrl = 'http://localhost:3000/alumnos';
-  // NUEVA URL: Apunta al endpoint de autenticación de tu backend en Node.js
   private authUrl = 'http://localhost:3000/auth'; 
+
+  // 💡 ESTADO REACTIVO DE SESIÓN
+  private usuarioSubject = new BehaviorSubject<any>(this.obtenerUsuarioSesion());
+  public usuario$ = this.usuarioSubject.asObservable();
 
   constructor(private http: HttpClient) { }
 
@@ -27,22 +30,64 @@ export class AlumnoService {
   }
 
   // ==========================================
-  // NUEVOS MÉTODOS PARA HACER FUNCIONAR TU LOGIN
+  // MÉTODOS DE AUTENTICACIÓN Y SESIÓN
   // ==========================================
 
-  // Envía el correo y la contraseña a tu backend Express
   login(credenciales: any): Observable<any> {
     return this.http.post(`${this.authUrl}/login`, credenciales);
   }
 
-  // Guarda los datos del usuario que inició sesión en el almacenamiento local
-  guardarSesion(usuario: any) {
-    localStorage.setItem('usuarioLogueado', JSON.stringify(usuario));
+guardarSesion(respuestaLogin: any) {
+  if (!respuestaLogin) {
+    console.error('La respuesta de login está vacía');
+    return;
   }
 
-  // Obtiene el usuario que está actualmente conectado (por si lo necesitas en el Home)
+  // Detectamos si el usuario viene envuelto en .usuario o viene directamente
+  const usuario = respuestaLogin.usuario || (respuestaLogin.rut_usuario ? respuestaLogin : null);
+  const token = respuestaLogin.token_acceso;
+
+  if (usuario) {
+    localStorage.setItem('usuarioLogueado', JSON.stringify(usuario));
+    
+    if (token) {
+      localStorage.setItem('tokenAcceso', token);
+    }
+
+    this.usuarioSubject.next(usuario);
+    console.log('✅ Sesión guardada exitosamente:', usuario);
+  } else {
+    console.error('Intento de guardar una sesión con datos inválidos:', respuestaLogin);
+  }
+}
+
   obtenerUsuarioSesion() {
     const user = localStorage.getItem('usuarioLogueado');
-    return user ? JSON.parse(user) : null;
+
+    // 🛑 Blindaje contra "undefined", null o valores vacíos
+    if (!user || user === 'undefined' || user === 'null') {
+      return null;
+    }
+
+    try {
+      return JSON.parse(user);
+    } catch (error) {
+      console.error('Error al parsear el usuario de la sesión:', error);
+      this.cerrarSesion(); // Si el JSON está corrupto, limpiamos
+      return null;
+    }
+  }
+
+  estaLogueado(): boolean {
+    return this.obtenerUsuarioSesion() !== null;
+  }
+
+  cerrarSesion() {
+    // Limpiamos todo el almacenamiento local de autenticación
+    localStorage.removeItem('usuarioLogueado');
+    localStorage.removeItem('tokenAcceso');
+    
+    // 📢 Notificamos a los suscriptores que ya no hay usuario en sesión
+    this.usuarioSubject.next(null);
   }
 }

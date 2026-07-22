@@ -39,3 +39,280 @@
 * {
   font-family: 'Poppins', sans-serif;
 }
+
+.footer-duoc {
+  background-color: #001e36;
+  color: #ffffff;
+  padding: 30px 0 0 0;
+  width: 100%;
+  clear: both;
+}
+  .footer-top {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-around;
+    padding: 0 20px;
+    gap: 20px;
+  }
+
+  .footer-col {
+    flex: 1;
+    min-width: 240px;
+
+    h3 {
+      font-size: 1.1rem;
+      font-weight: bold;
+      color: #ffffff;
+    }
+
+    .linea-titulo {
+      height: 3px;
+      width: 40px;
+      background-color: #ffb800; // Amarillo Duoc
+      margin: 8px 0 16px 0;
+    }
+
+    ul {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+
+      li {
+        margin-bottom: 8px;
+        a {
+          color: #d1d5db;
+          text-decoration: none;
+          &:hover {
+            color: #ffffff;
+            text-decoration: underline;
+          }
+        }
+      }
+    }
+  }
+
+  .footer-bloque {
+    margin-top: 15px;
+    h4 {
+      font-size: 0.9rem;
+      font-weight: bold;
+      color: #ffb800;
+    }
+    p {
+      margin: 4px 0;
+      font-size: 0.85rem;
+      a {
+        color: #ffffff;
+      }
+    }
+  }
+
+  .footer-redes {
+    display: flex;
+    gap: 15px;
+    margin-top: 15px;
+    ion-icon {
+      font-size: 1.5rem;
+      color: #ffffff;
+    }
+  }
+
+  .footer-bottom {
+    background-color: #001424;
+    text-align: center;
+    padding: 15px 0;
+    margin-top: 30px;
+
+    .logo-footer {
+      max-width: 130px;
+      height: auto;
+    }
+  }
+  //header
+  // Forzar color de fondo azul Duoc e impedir transparencias
+.toolbar-duoc {
+  --background: #001e36 !important;
+  --color: #ffffff !important;
+  color: #ffffff;
+  padding: 5px 10px;
+}
+
+.header-container {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  height: 50px;
+}
+
+/* LADO IZQUIERDO */
+.bloque-izquierdo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+
+  .btn-menu-blanco {
+    --color: #ffffff !important;
+  }
+
+  .clima-box {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    color: #e5e7eb;
+    font-size: 0.85rem;
+    white-space: nowrap;
+
+    ion-icon {
+      font-size: 1.2rem;
+      color: #ffb800; // Amarillo clima
+    }
+  }
+}
+
+/* LADO DERECHO */
+.bloque-derecho {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+
+  .nombre-usuario {
+    color: #ffffff;
+    font-size: 0.85rem;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+
+  .btn-auth {
+    --color: #ffffff;
+    font-size: 0.85rem;
+    font-weight: bold;
+    margin: 0;
+  }
+
+  .btn-logout {
+    --color: #ff4d4d !important; // Rojo para destacar cerrar sesión
+  }
+
+  /* AQUÍ CONTROLAMOS EL TAMAÑO DEL LOGO PARA QUE NO TAPE NADA */
+  .logo-duoc {
+    height: 32px !important;
+    width: auto !important;
+    max-width: 120px !important;
+    object-fit: contain;
+  }
+}
+/* ==========================================
+   ESTILOS GLOBALES REFORZADOS PARA EL HEADER
+   ========================================== */
+
+/* 1. Forzar color azul en el toolbar de Ionic */
+ion-toolbar.toolbar-duoc {
+  --background: #001e36 !important;
+  --color: #ffffff !important;
+  background-color: #001e36 !important;
+  color: #ffffff !important;
+  min-height: 56px;
+}
+
+/* 2. Disposición en una sola fila horizontal */
+.header-container {
+  display: flex !important;
+  justify-content: space-between !important;
+  align-items: center !important;
+  width: 100% !important;
+  padding: 0 5px;
+}
+
+.bloque-izquierdo,
+.bloque-derecho {
+  display: flex !important;
+  align-items: center !important;
+  gap: 10px !important;
+}
+
+/* 3. CONTROL ESTRICTO DEL LOGO DUOC (Evita que se agrande) */
+.logo-duoc {
+  height: 30px !important;
+  max-height: 30px !important;
+  width: auto !important;
+  max-width: 110px !important;
+  object-fit: contain !important;
+  display: block !important;
+}
+
+/* 4. Estilo de texto y botones */
+.nombre-usuario {
+  color: #ffffff !important;
+  font-size: 0.85rem !important;
+  font-weight: 600 !important;
+  white-space: nowrap !important;
+}
+
+.btn-menu-blanco {
+  --color: #ffffff !important;
+  color: #ffffff !important;
+}
+
+.clima-box {
+  display: flex !important;
+  align-items: center !important;
+  gap: 4px !important;
+  color: #e5e7eb !important;
+  font-size: 0.8rem !important;
+  white-space: nowrap !important;
+
+  ion-icon {
+    font-size: 1.1rem !important;
+    color: #ffb800 !important;
+  }
+}
+
+.btn-auth {
+  --color: #ffffff !important;
+  font-size: 0.85rem !important;
+}
+
+.btn-logout {
+  --color: #ff4d4d !important;
+  font-weight: bold !important;
+}
+/* ============================================================================
+   FIX DEFINITIVO PARA EL LAYOUT SHIFT (EL "SALTITO" AL ABRIR EL MENÚ)
+   ============================================================================ */
+
+/* 1. Reserva de manera fija el espacio de la barra de desplazamiento */
+html {
+  scrollbar-gutter: stable !important;
+}
+
+/* 2. Anula la modificación que hace Ionic sobre el body/app al activar el menú */
+body.menu-content-open,
+ion-app.menu-content-open,
+.menu-content-open ion-router-outlet,
+.menu-content-open .ion-page {
+  overflow: initial !important;
+  padding-right: 0 !important;
+  margin-right: 0 !important;
+  transform: none !important;
+}
+
+/* 3. Aísla las páginas dentro del router para que ignoren cambios externos */
+ion-router-outlet {
+  contain: layout style !important;
+}
+
+ion-router-outlet > .ion-page {
+  width: 100% !important;
+  max-width: 100vw !important;
+  box-sizing: border-box !important;
+}
+
+/* 4. Asegura que el menú sea una capa flotante pura e independiente */
+ion-menu.menu-type-overlay {
+  position: fixed !important;
+  top: 0 !important;
+  bottom: 0 !important;
+  left: 0 !important;
+  z-index: 99999 !important;
+}
