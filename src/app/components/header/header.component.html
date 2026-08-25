@@ -10,7 +10,7 @@
     
     <div style="display: flex; justify-content: space-between; align-items: center; width: 100%; height: 50px;">
 
-      <!-- LADO IZQUIERDO: Menú + Logo Duoc + Clima -->
+      <!-- LADO IZQUIERDO: Menú + Logo + Clima -->
       <div style="display: flex; align-items: center; gap: 12px;">
         
         <!-- Botón de Menú -->
@@ -18,15 +18,11 @@
           <ion-menu-button autoHide="false" style="--color: #ffffff; color: #ffffff;"></ion-menu-button>
         </ion-buttons>
 
-        <!-- Logo Duoc -->
-        <div style="height: 32px; width: 85px; display: flex; align-items: center; justify-content: center; overflow: hidden;">
-          <img src="assets/logoDuocBlanco.png" alt="Logo Duoc UC" style="max-height: 100%; max-width: 100%; object-fit: contain; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));" />
-        </div>
 
         <!-- Divisor sutil -->
         <div style="height: 18px; width: 1px; background: rgba(255, 255, 255, 0.2); margin: 0 2px;"></div>
 
-        <!-- Clima (Cápsula elegante) -->
+        <!-- Clima -->
         <div style="
           display: flex; 
           align-items: center; 
@@ -39,7 +35,7 @@
           font-size: 0.78rem;
         ">
           <ion-icon name="partly-sunny-outline" style="font-size: 1.1rem; color: #ffb800;"></ion-icon>
-          <span style="white-space: nowrap; font-weight: 500;">18°C, Puente Alto</span>
+          <span style="white-space: nowrap; font-weight: 500;">18°C, Santiago</span>
         </div>
       </div>
 
@@ -81,32 +77,35 @@
             border-radius: 20px; 
             border: 1px solid rgba(255, 255, 255, 0.12);
           ">
-            <!-- Punto indicador online -->
             <div style="width: 7px; height: 7px; background-color: #10b981; border-radius: 50%; box-shadow: 0 0 8px #10b981;"></div>
             
             <span style="color: #e5e7eb; font-size: 0.8rem; font-weight: 500; white-space: nowrap;">
-              Hola, <strong style="color: #ffb800; font-weight: 700;">{{ usuarioLogueado.nombre || usuarioLogueado.nombre_completo || 'Alumno' }}</strong>
+              Bienvenido: <strong style="color: #ffb800; font-weight: 700;">{{ usuarioLogueado.nombre || usuarioLogueado.nombre_completo || 'Alumno' }}</strong>
             </span>
           </div>
 
-          <!-- BOTÓN CERRAR SESIÓN ESTILO ATRACTIVO/RED -->
+          <!-- BOTÓN CERRAR SESIÓN REDISEÑADO -->
           <ion-button 
             (click)="cerrarSesion()" 
+            title="Cerrar sesión"
             style="
-              --background: linear-gradient(135deg, #ef4444 0%, #b91c1c 100%);
-              --color: #ffffff; 
-              --border-radius: 20px;
-              --padding-start: 14px;
-              --padding-end: 16px;
-              font-size: 0.8rem; 
-              font-weight: 700; 
-              height: 36px;
+              --background: rgba(239, 68, 68, 0.12);
+              --color: #f87171; 
+              --border-radius: 14px;
+              --border-width: 1px;
+              --border-style: solid;
+              --border-color: rgba(239, 68, 68, 0.35);
+              --padding-start: 12px;
+              --padding-end: 14px;
+              font-size: 0.78rem; 
+              font-weight: 600; 
+              height: 34px;
               margin: 0;
-              box-shadow: 0 4px 12px rgba(239, 68, 68, 0.35);
             ">
-            <ion-icon name="log-out-outline" slot="start" style="font-size: 1.15rem; color: #ffffff; margin-right: 2px;"></ion-icon>
-            Cerrar sesión
+            <ion-icon name="log-out-outline" slot="start" style="font-size: 1.05rem; color: #f87171; margin-right: 4px;"></ion-icon>
+            Salir
           </ion-button>
+
         </ng-container>
 
       </div>
