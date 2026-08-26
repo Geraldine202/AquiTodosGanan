@@ -1,9 +1,170 @@
-.toolbar-duoc {
-  --background: #111;
+/* ===== FONDO CON IMAGEN COMPLETA A LA IZQUIERDA ===== */
+.login-content {
+  --background: transparent;
+  --overflow: hidden; /* Elimina la barra de desplazamiento vertical */
+}
+
+.login-content::part(background) {
+  background-image: url('../../../assets/image_38683be5.png');
+  background-size: cover;
+  background-position: right center; /* Prioriza la vista izquierda de la imagen */
+  background-repeat: no-repeat;
+}
+
+/* ===== CONTENEDOR AJUSTADO A LA DERECHA ===== */
+.login-container {
+  display: flex;
+  align-items: left; /* Alinea la tarjeta al lado izquierdo del contenedor */
+  justify-content: flex-start; /* Posiciona la tarjeta en el lado derecho */
+  height: calc(100vh - 60px); /* Alto exacto visible descontando el header */
+  width: 100%;
+  padding-right: 0%; /* Margen desde el borde derecho en pantallas grandes */
+  box-sizing: border-box;
+
+  @media (max-width: 767px) {
+    justify-content: center;
+    padding: 16px;
+    background: rgba(10, 25, 47, 0.4); /* Capa protectora para legibilidad en celulares */
+  }
+}
+
+/* ===== TARJETA FORMAL LIMPIA ===== */
+.login-card {
+  width: 100%;
+  max-width: 500px;
+  background: #ffffff;
+  padding: 34px 30px;
+  box-shadow: -10px 20px 40px rgba(0, 0, 0, 0.22);
+  border: 1px solid #e2e8f0;
+  text-align: center;
+  margin: 0;
+
+  .logo-box {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin-bottom: 10px;
+
+    .login-logo {
+      max-height: 100px;
+      width: auto;
+      object-fit: contain;
+    }
+  }
+
+  .login-header {
+    margin-bottom: 22px;
+
+    h1 {
+      color: #0f172a;
+      font-size: 1.5rem;
+      font-weight: 700;
+      letter-spacing: -0.3px;
+      margin: 0 0 4px 0;
+    }
+
+    p {
+      color: #64748b;
+      font-size: 0.88rem;
+      font-weight: 400;
+      margin: 0;
+    }
+  }
+
+  .form-container {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+
+  .input-item {
+    --background: #f8fafc;
+    --border-radius: 10px;
+    --padding-start: 12px;
+    --inner-padding-end: 12px;
+    --highlight-color-focused: #001e36;
+    border: 1px solid #cbd5e1;
+    border-radius: 10px;
+    transition: all 0.2s ease-in-out;
+
+    &:focus-within {
+      border-color: #001e36;
+      box-shadow: 0 0 0 3px rgba(0, 30, 54, 0.1);
+      --background: #ffffff;
+    }
+
+    ion-icon {
+      color: #475569;
+      font-size: 1.1rem;
+      margin-top: 12px;
+    }
+
+    ion-input {
+      --color: #0f172a;
+      --placeholder-color: #94a3b8;
+      font-size: 0.9rem;
+      font-weight: 500;
+    }
+
+    .icon-ojo {
+      color: #64748b;
+      font-size: 1.1rem;
+      cursor: pointer;
+      margin-top: 12px;
+      z-index: 10;
+      transition: color 0.2s ease;
+
+      &:hover {
+        color: #0f172a;
+      }
+    }
+  }
+
+  .btn-login-main {
+    --border-radius: 10px;
+    --padding-top: 12px;
+    --padding-bottom: 12px;
+    --background: #001e36;
+    --color: #ffffff;
+    font-weight: 600;
+    font-size: 0.95rem;
+    margin-top: 6px;
+    box-shadow: 0 4px 12px rgba(0, 30, 54, 0.2);
+    transition: all 0.2s ease;
+
+    &:hover {
+      --background: #002d52;
+    }
+  }
+
+  .login-footer-links {
+    margin-top: 12px;
+
+    .btn-forgot {
+      --color: #64748b;
+      font-size: 0.85rem;
+      font-weight: 500;
+      margin: 0;
+
+      &:hover {
+        --color: #001e36;
+      }
+    }
+  }
+}
+
+/* ===== ENCABEZADO SUPERIOR INSTITUCIONAL ===== */
+ion-toolbar {
+  --min-height: 60px;
+}
+
+.toolbar-institucional {
+  --background: rgba(10, 25, 47, 0.85);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
   --color: white;
-  padding-left: 10px;
-  padding-right: 10px;
-  border-bottom: 1px solid rgba(255,255,255,0.1);
+  padding: 0 16px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .header-contenido {
@@ -22,133 +183,40 @@
 .grupo-clima-menu {
   display: flex;
   align-items: center;
-  gap: 0;
+  gap: 8px;
 }
 
 .clima-box {
   display: flex;
   align-items: center;
-  gap: 5px;
-  color: white;
+  gap: 6px;
+  color: #f1f5f9;
   font-size: 13px;
-  font-weight: 400;
-  background: rgba(255, 255, 255, 0.15);
-  padding: 6px 10px;
-  border-radius: 20px;
-  margin-left: -4px;
+  font-weight: 500;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  padding: 5px 12px;
+  border-radius: 6px;
 }
 
 .btn-login {
   --color: white;
   font-weight: 500;
-  font-size: 14px;
+  font-size: 13px;
   text-transform: none;
-  border: 1px solid rgba(255,255,255,0.3);
-  border-radius: 20px;
-  padding: 0 10px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 6px;
+  padding: 0 12px;
 }
 
-.logo-duoc {
+.logo-header {
   height: 36px;
   width: auto;
   object-fit: contain;
   display: block;
-  margin-left: 8px;
+  margin-left: 10px;
 }
 
 .menu-blanco {
   --color: white;
-}
-
-.contenedor-home {
-  text-align: center;
-  margin-top: 50px;
-}
-
-h1 {
-  font-size: 28px;
-  font-weight: 600;
-  margin-bottom: 10px;
-}
-
-p {
-  font-size: 16px;
-  font-weight: 300;
-  color: #666;
-}
-
-ion-toolbar {
-  --min-height: 60px;
-}
-
-/* ===== CONTENEDOR ===== */
-
-.login-container {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  height: 100%;
-  padding: 20px;
-}
-
-/* ===== CARD ===== */
-
-.login-card {
-  width: 100%;
-  max-width: 380px;
-  background: #ffffff;
-  border-radius: 18px;
-  padding: 28px 22px;
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
-  text-align: center;
-}
-
-/* ===== TEXTOS ===== */
-
-.login-card h1 {
-  font-size: 24px;
-  font-weight: 600;
-  margin-bottom: 6px;
-}
-
-.login-card p {
-  font-size: 14px;
-  color: #666;
-  margin-bottom: 24px;
-}
-
-/* ===== INPUTS ===== */
-
-.input-item {
-  --background: #f5f5f5;
-  border-radius: 12px;
-  margin-bottom: 14px;
-  --padding-start: 12px;
-}
-
-/* ===== BOTÓN ===== */
-
-.btn-login-main {
-  --color: white;
-  --border-radius: 12px;
-  font-weight: 500;
-  margin-top: 12px;
-  height: 44px;
-}
-
-
-/* ===== EXTRA ===== */
-
-.login-extra {
-  margin-top: 16px;
-}
-
-.login-extra a {
-  font-size: 13px;
-  color: #666;
-  text-decoration: none;
-}
-
-.login-extra a:hover {
-  text-decoration: underline;
 }

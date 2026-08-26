@@ -2,7 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
 import { AlertController, LoadingController } from '@ionic/angular';
 
-// CORREGIDO: Importamos AlumnoService que es donde unificamos los métodos del login
+
 import { AlumnoService } from '../../services/alumno'; 
 
 @Component({
@@ -18,8 +18,10 @@ export class LoginPage implements OnInit {
     password: ''
   };
 
+
+  mostrarPassword: boolean = false;
+
   constructor(
-    // CORREGIDO: Inyectamos alumnoService en lugar de authService
     private alumnoService: AlumnoService,
     private router: Router,
     private alertController: AlertController,
@@ -27,6 +29,11 @@ export class LoginPage implements OnInit {
   ) { }
 
   ngOnInit() {
+  }
+
+
+  toggleMostrarPassword() {
+    this.mostrarPassword = !this.mostrarPassword;
   }
 
   async iniciarSesion() {
@@ -41,12 +48,10 @@ export class LoginPage implements OnInit {
     });
     await loading.present();
 
-    // CORREGIDO: Llamamos a alumnoService para procesar la autenticación
     this.alumnoService.login(this.credenciales).subscribe({
       next: (res: any) => {
         loading.dismiss();
         
-        // CORREGIDO: Guardamos la sesión usando el método del nuevo servicio
         this.alumnoService.guardarSesion(res.usuario);
         this.router.navigate(['/home']);
       },

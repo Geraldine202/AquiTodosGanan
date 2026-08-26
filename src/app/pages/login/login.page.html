@@ -1,107 +1,61 @@
-<ion-header class="ion-no-border">
-  <ion-toolbar style="
-    --background: #001e36; 
-    background: linear-gradient(135deg, #001e36 0%, #001122 100%); 
-    --color: #ffffff; 
-    color: #ffffff; 
-    padding: 6px 16px;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
-  ">
-    
-    <div style="display: flex; justify-content: space-between; align-items: center; width: 100%; height: 50px;">
+<app-header></app-header>
 
-      <!-- LADO IZQUIERDO: Menú + Logo Duoc + Clima -->
-      <div style="display: flex; align-items: center; gap: 10px;">
-        
-        <!-- 💡 AQUÍ ESTÁ DE VUELTA EL BOTÓN DEL MENÚ LATERA L -->
-        <ion-buttons slot="start">
-          <ion-menu-button autoHide="false" style="--color: #ffffff; color: #ffffff;"></ion-menu-button>
-        </ion-buttons>
-
-        <!-- Logo Duoc a la izquierda -->
-        <div style="height: 32px; width: 85px; display: flex; align-items: center; justify-content: center; overflow: hidden;">
-          <img src="assets/logoDuocBlanco.png" alt="Logo Duoc UC" style="max-height: 100%; max-width: 100%; object-fit: contain; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));" />
-        </div>
-
-        <!-- Divisor sutil -->
-        <div style="height: 18px; width: 1px; background: rgba(255, 255, 255, 0.2); margin: 0 2px;"></div>
-
-        <!-- Clima -->
-        <div style="
-          display: flex; 
-          align-items: center; 
-          gap: 6px; 
-          background: rgba(255, 255, 255, 0.07); 
-          padding: 4px 10px; 
-          border-radius: 12px; 
-          border: 1px solid rgba(255, 255, 255, 0.1);
-          color: #f3f4f6; 
-          font-size: 0.78rem;
-        ">
-          <ion-icon name="partly-sunny-outline" style="font-size: 1.1rem; color: #ffb800;"></ion-icon>
-          <span style="white-space: nowrap; font-weight: 500;">18°C, Puente Alto</span>
-        </div>
-      </div>
-
-      <!-- LADO DERECHO: Indicador de Página -->
-      <div style="display: flex; align-items: center; gap: 8px;">
-        <div style="
-          display: flex; 
-          align-items: center; 
-          gap: 6px; 
-          background: rgba(255, 255, 255, 0.08); 
-          padding: 5px 12px; 
-          border-radius: 20px; 
-          border: 1px solid rgba(255, 255, 255, 0.12);
-        ">
-          <ion-icon name="lock-closed-outline" style="font-size: 1rem; color: #ffb800;"></ion-icon>
-          <span style="color: #e5e7eb; font-size: 0.8rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">
-            Acceso
-          </span>
-        </div>
-      </div>
-
-    </div>
-
-  </ion-toolbar>
-</ion-header>
-
-<ion-content [fullscreen]="true" class="login-content ion-no-padding">
+<ion-content class="login-content ion-no-padding">
   <div class="login-container">
     <div class="login-card">
 
-      <h1>Bienvenido</h1>
-      <p>Accede con tu cuenta Duoc UC</p>
+      <!-- Logo de la Plataforma -->
+      <div class="logo-box">
+        <img src="assets/logo.png" alt="Logo Institucional" class="login-logo" />
+      </div>
 
-      <ion-item class="input-item">
-        <ion-icon name="person-outline" slot="start"></ion-icon>
-        <ion-input 
-          type="email" 
-          placeholder="ejemplo@duocuc.cl" 
-          label="Correo Institucional" 
-          labelPlacement="floating" 
-          [(ngModel)]="credenciales.correo">
-        </ion-input>
-      </ion-item>
+      <!-- Encabezado de la Tarjeta -->
+      <div class="login-header">
+        <h1>Bienvenid@</h1>
+        <p>Accede con tu cuenta</p>
+      </div>
 
-      <ion-item class="input-item">
-        <ion-icon name="lock-closed-outline" slot="start"></ion-icon>
-        <ion-input 
-          type="password" 
-          placeholder="••••••••" 
-          label="Contraseña" 
-          labelPlacement="floating" 
-          [(ngModel)]="credenciales.password">
-        </ion-input>
-      </ion-item>
+      <!-- Formulario de Entrada -->
+      <div class="form-container">
+        <ion-item class="input-item" lines="none">
+          <ion-icon name="person-outline" slot="start"></ion-icon>
+          <ion-input 
+            type="email" 
+            placeholder="usuario@gmail.com" 
+            label="Correo" 
+            labelPlacement="floating" 
+            [(ngModel)]="credenciales.correo">
+          </ion-input>
+        </ion-item>
 
-      <ion-button expand="block" color="warning" class="btn-login-main" (click)="iniciarSesion()">
-        Ingresar
-      </ion-button>
+        <!-- Campo de Contraseña con Ojito -->
+        <ion-item class="input-item" lines="none">
+          <ion-icon name="lock-closed-outline" slot="start"></ion-icon>
+          <ion-input 
+            [type]="mostrarPassword ? 'text' : 'password'" 
+            placeholder="••••••••" 
+            label="Contraseña" 
+            labelPlacement="floating" 
+            [(ngModel)]="credenciales.password">
+          </ion-input>
+          <ion-icon 
+            [name]="mostrarPassword ? 'eye-off-outline' : 'eye-outline'" 
+            slot="end" 
+            class="icon-ojo"
+            (click)="toggleMostrarPassword()">
+          </ion-icon>
+        </ion-item>
 
-      <ion-button fill="clear" routerLink="/recuperar" style="--color: #001e36; font-size: 0.85rem;">
-        ¿Olvidaste tu contraseña?
-      </ion-button>
+        <ion-button expand="block" color="warning" class="btn-login-main" (click)="iniciarSesion()">
+          Ingresar
+        </ion-button>
+
+        <div class="login-footer-links">
+          <ion-button fill="clear" routerLink="/recuperar" class="btn-forgot">
+            ¿Olvidaste tu contraseña?
+          </ion-button>
+        </div>
+      </div>
 
     </div>
   </div>

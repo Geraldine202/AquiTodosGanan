@@ -8,6 +8,7 @@ import { LoginPageRoutingModule } from './login-routing.module';
 
 import { LoginPage } from './login.page';
 import { FooterComponent } from 'src/app/components/footer/footer.component';
+import { HeaderComponent } from 'src/app/components/header/header.component';
 
 @NgModule({
   imports: [
@@ -15,7 +16,8 @@ import { FooterComponent } from 'src/app/components/footer/footer.component';
     FormsModule,
     IonicModule,
     LoginPageRoutingModule, 
-    FooterComponent
+    FooterComponent,
+    HeaderComponent      
   ],
   declarations: [LoginPage]
 })

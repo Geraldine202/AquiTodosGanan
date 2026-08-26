@@ -18,7 +18,6 @@
           <ion-menu-button autoHide="false" style="--color: #ffffff; color: #ffffff;"></ion-menu-button>
         </ion-buttons>
 
-
         <!-- Divisor sutil -->
         <div style="height: 18px; width: 1px; background: rgba(255, 255, 255, 0.2); margin: 0 2px;"></div>
 
@@ -42,8 +41,8 @@
       <!-- LADO DERECHO: Login / Panel Usuario + Logout -->
       <div style="display: flex; align-items: center; gap: 10px;">
         
-        <!-- ESTADO 1: NO LOGUEADO -->
-        <ng-container *ngIf="!usuarioLogueado">
+        <!-- ESTADO 1: NO LOGUEADO (SE OCULTA EN /login) -->
+        <ng-container *ngIf="!usuarioLogueado && router.url !== '/login'">
           <ion-button 
             routerLink="/login" 
             style="
