@@ -15,6 +15,7 @@ export class AdminActividadesPage implements OnInit {
   busquedaActividad: string = '';
   busquedaDocente: string = '';
   idActividadSeleccionada: number | null = null;
+  cargandoImagen: boolean = false;
 
   // Listas de datos desde FastAPI / Supabase
   listaActividades: any[] = [];
@@ -39,7 +40,8 @@ export class AdminActividadesPage implements OnInit {
     puntos: null as number | null,
     cupos: null as number | null,
     lugar: '',
-    requisito: ''
+    requisito: '',
+    img_actv: ''
   };
 
   // Formulario de Edición
@@ -57,19 +59,49 @@ export class AdminActividadesPage implements OnInit {
   }
 
   // Carga inicial de datos desde los endpoints de catálogo
-  cargarCatalogos() {
-    this.actividadService.getDocentes().subscribe({
-      next: (data) => {
-        this.listaDocentes = data;
-        this.docentesFiltrados = [...data];
-      },
-      error: () => this.mostrarToast('Error al cargar docentes desde la BD', 'danger')
-    });
+cargarCatalogos() {
+  // 1. Cargar Sedes (Asigna 'descripcion' para que coincida con tu HTML)
+  this.actividadService.getSedes().subscribe({
+    next: (data: any) => {
+      const sedesRaw = Array.isArray(data) ? data : (data?.data || []);
+      
+      this.listaSedes = sedesRaw.map((s: any) => ({
+        id_sede: Number(s.id_sede ?? s.id ?? s.id_sede_act),
+        descripcion: s.descripcion || s.nombre_sede || s.nombre || s.lugar || 'Sede sin nombre'
+      }));
+    },
+    error: (err) => {
+      console.error('Error al cargar sedes:', err);
+      this.mostrarToast('Error al cargar sedes desde la BD', 'danger');
+    }
+  });
 
-    this.actividadService.getTiposActividad().subscribe(data => this.listaTipos = data);
-    this.actividadService.getEstadosActividad().subscribe(data => this.listaEstados = data);
-    this.actividadService.getSedes().subscribe(data => this.listaSedes = data);
-  }
+  // 2. Cargar Tipos
+  this.actividadService.getTiposActividad().subscribe({
+    next: (data: any) => this.listaTipos = Array.isArray(data) ? data : (data?.data || []),
+    error: (err) => console.error('Error al cargar tipos:', err)
+  });
+
+  // 3. Cargar Estados
+  this.actividadService.getEstadosActividad().subscribe({
+    next: (data: any) => this.listaEstados = Array.isArray(data) ? data : (data?.data || []),
+    error: (err) => console.error('Error al cargar estados:', err)
+  });
+
+  // 4. Cargar Docentes
+  this.actividadService.getDocentes().subscribe({
+    next: (data: any) => {
+      const docentesRaw = Array.isArray(data) ? data : (data?.data || []);
+      this.listaDocentes = docentesRaw.map((doc: any) => ({
+        ...doc,
+        rut_usuario: doc.rut_usuario || doc.rut || doc.rut_docente || 'S/R',
+        nombre_completo: doc.nombre_completo || `${doc.p_nombre || doc.nombre || ''} ${doc.p_apellido || doc.apellido || ''}`.trim()
+      }));
+      this.docentesFiltrados = [...this.listaDocentes];
+    },
+    error: (err) => console.error('Error al cargar docentes:', err)
+  });
+}
 
   cargarActividades() {
     this.actividadService.getActividades().subscribe({
@@ -81,7 +113,40 @@ export class AdminActividadesPage implements OnInit {
     });
   }
 
-  // Filtrar lista de actividades en la vista principal
+  seleccionarImagen(event: any, modo: 'agregar' | 'editar') {
+    const file: File = event.target.files[0];
+    if (!file) return;
+
+    this.cargandoImagen = true;
+    this.mostrarToast('Subiendo imagen...', 'warning');
+
+    this.actividadService.subirImagen(file).subscribe({
+      next: (res) => {
+        this.cargandoImagen = false;
+        if (modo === 'agregar') {
+          this.formulario.img_actv = res.url;
+        } else {
+          this.formularioEdicion.img_actv = res.url;
+        }
+        this.mostrarToast('Imagen subida correctamente', 'success');
+      },
+      error: (err) => {
+        this.cargandoImagen = false;
+        console.error('Error al subir imagen:', err);
+        this.mostrarToast('Error al subir la imagen al servidor', 'danger');
+      }
+    });
+  }
+
+  quitarImagen(modo: 'agregar' | 'editar') {
+    if (modo === 'agregar') {
+      this.formulario.img_actv = '';
+    } else {
+      this.formularioEdicion.img_actv = '';
+    }
+    this.mostrarToast('Imagen quitada del formulario', 'warning');
+  }
+
   filtrarActividades() {
     const q = this.busquedaActividad.toLowerCase().trim();
     if (!q) {
@@ -94,7 +159,6 @@ export class AdminActividadesPage implements OnInit {
     );
   }
 
-  // Lógica para abrir el Mini Slide / Modal de docentes
   abrirModalDocentes(modo: 'agregar' | 'editar') {
     this.modoFormulario = modo;
     this.busquedaDocente = '';
@@ -102,7 +166,6 @@ export class AdminActividadesPage implements OnInit {
     this.modalDocentes.present();
   }
 
-  // Filtrar docentes dentro del Modal
   filtrarDocentes() {
     const q = this.busquedaDocente.toLowerCase().trim();
     if (!q) {
@@ -115,14 +178,16 @@ export class AdminActividadesPage implements OnInit {
     );
   }
 
-  // Seleccionar docente y autocompletar Responsable y RUT
   seleccionarDocente(docente: { rut_usuario: string; nombre_completo: string }) {
+    const nombre = docente.nombre_completo || 'Docente Seleccionado';
+    const rut = docente.rut_usuario || '';
+
     if (this.modoFormulario === 'agregar') {
-      this.formulario.responsable_actividad = docente.nombre_completo;
-      this.formulario.rut_usuario = docente.rut_usuario;
+      this.formulario.responsable_actividad = nombre;
+      this.formulario.rut_usuario = rut;
     } else {
-      this.formularioEdicion.responsable_actividad = docente.nombre_completo;
-      this.formularioEdicion.rut_usuario = docente.rut_usuario;
+      this.formularioEdicion.responsable_actividad = nombre;
+      this.formularioEdicion.rut_usuario = rut;
     }
     this.modalDocentes.dismiss();
   }
@@ -134,25 +199,24 @@ export class AdminActividadesPage implements OnInit {
       responsable_actividad: '',
       rut_usuario: '',
       id_tipo_actividad: null,
-      id_estado_actividad: 1, // Reset a 'Programada'
+      id_estado_actividad: 1,
       id_sede: null,
       fecha_inicio: '',
       fecha_termino: '',
       puntos: null,
       cupos: null,
       lugar: '',
-      requisito: ''
+      requisito: '',
+      img_actv: ''
     };
   }
 
-  // Convierte cadenas de fecha a ISO válido
   private formatearFechaISO(fechaStr: string): string {
     if (!fechaStr || fechaStr.trim() === '') return new Date().toISOString();
     const d = new Date(fechaStr);
     return isNaN(d.getTime()) ? new Date().toISOString() : d.toISOString();
   }
 
-  // Construye el objeto exacto requerido por FastAPI
   private construirPayload(f: any): ActividadPayload {
     return {
       nombre_actividad: f.nombre_actividad,
@@ -167,11 +231,11 @@ export class AdminActividadesPage implements OnInit {
       puntos: f.puntos ? Number(f.puntos) : 0,
       cupos: f.cupos ? Number(f.cupos) : 0,
       lugar: f.lugar || 'Por definir',
-      requisito: f.requisito || 'Sin requisitos'
+      requisito: f.requisito || 'Sin requisitos',
+      img_actv: f.img_actv || ''
     };
   }
 
-  // Guardar nueva actividad (FastAPI crea la actividad y llena las 5 tablas relacionadas)
   guardarActividad(modal: IonModal) {
     if (!this.formulario.nombre_actividad || !this.formulario.rut_usuario || !this.formulario.id_tipo_actividad) {
       this.mostrarToast('Por favor complete los campos obligatorios (*)', 'warning');
@@ -194,11 +258,9 @@ export class AdminActividadesPage implements OnInit {
     });
   }
 
-  // Cargar datos en el modal de edición extrayendo datos relacionales anidados de la BD
   prepararEdicion(act: any, modal: IonModal) {
     this.idActividadSeleccionada = act.id_actividad;
 
-    // Extracción segura soportando listas u objetos anidados de las tablas relacionales
     const puntoItem = Array.isArray(act.puntaje_act) ? act.puntaje_act[0] : act.puntaje_act;
     const cupoItem = Array.isArray(act.cupo_actividad) ? act.cupo_actividad[0] : act.cupo_actividad;
     const lugarItem = Array.isArray(act.lugar_actividad) ? act.lugar_actividad[0] : act.lugar_actividad;
@@ -208,8 +270,8 @@ export class AdminActividadesPage implements OnInit {
     this.formularioEdicion = {
       nombre_actividad: act.nombre_actividad || '',
       descripcion: act.descripcion || '',
-      responsable_actividad: act.responsable_actividad || '',
-      rut_usuario: act.rut_usuario || '',
+      responsable_actividad: act.responsable_actividad || act.usuario?.nombre_completo || '',
+      rut_usuario: act.rut_usuario || act.usuario?.rut_usuario || '',
       id_tipo_actividad: act.id_tipo_actividad || null,
       id_estado_actividad: act.id_estado_actividad || 1,
       id_sede: act.id_sede || null,
@@ -218,13 +280,13 @@ export class AdminActividadesPage implements OnInit {
       puntos: puntoItem?.cantidad ?? null,
       cupos: cupoItem?.cantidad ?? null,
       lugar: lugarItem?.descripcion || calItem?.lugar || '',
-      requisito: reqItem?.descripcion || ''
+      requisito: reqItem?.descripcion || '',
+      img_actv: act.img_actv || ''
     };
 
     modal.present();
   }
 
-  // Actualizar actividad existente
   actualizarActividad(modal: IonModal) {
     if (!this.idActividadSeleccionada) return;
 
@@ -243,11 +305,10 @@ export class AdminActividadesPage implements OnInit {
     });
   }
 
-  // Diálogo de confirmación antes de eliminar
   async confirmarEliminacion(id: number) {
     const alert = await this.alertController.create({
       header: 'Confirmar Eliminación',
-      message: '¿Está seguro de que desea eliminar esta actividad? Esta acción borrará la actividad y todos sus registros asociados.',
+      message: '¿Está seguro de que desea eliminar esta actividad?',
       buttons: [
         { text: 'Cancelar', role: 'cancel' },
         {
