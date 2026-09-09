@@ -1,9 +1,9 @@
 import { Injectable } from '@angular/core';
-import { HttpClient, HttpHeaders } from '@angular/common/http';
+import { HttpClient, HttpHeaders, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 
 // ==========================================
-// INTERFACES Y MODELOS
+// INTERFACES Y MODELOS (ACTIVIDADES)
 // ==========================================
 
 /** Payload necesario para Crear o Actualizar una Actividad */
@@ -22,22 +22,6 @@ export interface ActividadPayload {
   lugar: string;
   requisito?: string;
   img_actv?: string;     // URL pública devuelta por el backend
-}
-
-/** Interfaz para ítems de catálogos simples (Sedes, Tipos, Estados) */
-export interface CatalogoItem {
-  id_tipo_actividad?: number;
-  id_estado_actividad?: number;
-  id_sede?: number;
-  descripcion: string;
-}
-
-/** Interfaz para el catálogo de Docentes/Usuarios */
-export interface Docente {
-  rut_usuario: string;
-  nombre_completo: string;
-  correo: string;
-  id_tipo_usuario: number;
 }
 
 /** Respuesta completa de Actividad enviada por la API (con relaciones) */
@@ -64,12 +48,73 @@ export interface ActividadCompleta {
   calendario?: Array<{ id_calendario: number; fecha: string; hora: string; lugar: string }>;
 }
 
+// ==========================================
+// INTERFACES Y MODELOS (PREMIOS)
+// ==========================================
+
+/** Payload necesario para Crear o Actualizar un Premio */
+export interface PremioPayload {
+  descripcion: string;
+  valor?: number;
+  puntos_requeridos: number;
+  id_categoria: number;
+  rut_usuario: string;
+  id_sede: number;
+  estado_visibilidad?: boolean;
+  imagen?: string;
+  stock?: number;
+}
+
+/** Respuesta completa de Premio enviada por la API (con relaciones) */
+export interface PremioCompleto {
+  id_premio: number;
+  descripcion: string;
+  valor: number;
+  puntos_requeridos: number;
+  id_categoria: number;
+  rut_usuario: string;
+  id_sede: number;
+  estado_visibilidad: boolean;
+  imagen?: string;
+  categoria_premio?: { id_categoria?: number; descripcion: string };
+  sede?: { id_sede?: number; descripcion: string };
+  usuario?: { nombre_completo: string; correo: string };
+  stock_sede?: Array<{ id_stock: number; cantidad: number; id_sede: number }>;
+}
+
+// ==========================================
+// INTERFACES DE CATÁLOGOS Y USUARIOS
+// ==========================================
+
+/** Interfaz para ítems de catálogos simples (Sedes, Tipos, Estados) */
+export interface CatalogoItem {
+  id_tipo_actividad?: number;
+  id_estado_actividad?: number;
+  id_sede?: number;
+  descripcion: string;
+}
+
+/** Interfaz para categorías de premio */
+export interface CategoriaPremio {
+  id_categoria: number;
+  descripcion: string;
+}
+
+/** Interfaz para el catálogo de Docentes/Usuarios */
+export interface Docente {
+  rut_usuario: string;
+  nombre_completo: string;
+  correo: string;
+  id_tipo_usuario?: number;
+}
+
+
 @Injectable({
   providedIn: 'root',
 })
 export class ActividadService {
 
-  // URL base de tu backend FastAPI (puedes mover esto a src/environments/environment.ts)
+  // URL base de tu backend FastAPI (se recomienda mover a environment.ts)
   private apiUrl: string = 'http://localhost:8000';
 
   private httpOptions = {
@@ -85,20 +130,27 @@ export class ActividadService {
   // ==========================================
 
   /**
-   * Sube una imagen al backend (FastAPI) para ser alojada en Supabase Storage.
+   * Sube una imagen al backend (FastAPI) especifando el bucket ('actividad' o 'premio').
    * Retorna la URL pública generada.
    */
-  subirImagen(file: File): Observable<{ url: string; filename: string }> {
-    const formData = new FormData();
-    formData.append('file', file);
+// En src/app/services/actividad.service.ts (o la ruta donde tengas tu servicio)
 
-    // No se pasa 'httpOptions' para que el navegador establezca automáticamente
-    // el Content-Type multipart/form-data con el boundary.
-    return this.http.post<{ url: string; filename: string }>(`${this.apiUrl}/upload-imagen`, formData);
-  }
+subirImagen(
+  file: File, 
+  bucket: 'actividad' | 'premio' | 'premios' | string = 'actividad'
+): Observable<{ url: string; filename: string }> {
+  const formData = new FormData();
+  formData.append('file', file);
+  formData.append('bucket', bucket); // <-- Adjuntar al cuerpo de la petición
+
+  return this.http.post<{ url: string; filename: string }>(
+    `${this.apiUrl}/upload-imagen`, // <-- Sin query param en la URL
+    formData
+  );
+}
 
   // ==========================================
-  // CATÁLOGOS
+  // CATÁLOGOS COMPARTIDOS
   // ==========================================
 
   /** Obtiene docentes responsables (id_tipo_usuario = 3) */
@@ -114,6 +166,11 @@ export class ActividadService {
   /** Obtiene estados de la actividad (ej: Programada, Finalizada) */
   getEstadosActividad(): Observable<CatalogoItem[]> {
     return this.http.get<CatalogoItem[]>(`${this.apiUrl}/estados-actividad`);
+  }
+
+  /** Obtiene las categorías de premios */
+  getCategoriasPremio(): Observable<CategoriaPremio[]> {
+    return this.http.get<CategoriaPremio[]>(`${this.apiUrl}/categorias-premio`);
   }
 
   /** Obtiene las sedes disponibles */
@@ -135,27 +192,47 @@ export class ActividadService {
     return this.http.get<ActividadCompleta>(`${this.apiUrl}/actividades/${id}`);
   }
 
-  /**
-   * Registra una nueva actividad.
-   * La API creará el registro principal e insertará automáticamente
-   * los registros vinculados (puntos, cupos, lugar, calendario, etc.).
-   */
+  /** Registra una nueva actividad */
   crearActividad(actividad: ActividadPayload): Observable<ActividadCompleta> {
     return this.http.post<ActividadCompleta>(`${this.apiUrl}/actividades`, actividad, this.httpOptions);
   }
 
-  /** 
-   * Actualiza una actividad existente y sus tablas hijas.
-   * Si 'img_actv' cambia, el backend eliminará la imagen anterior del Storage.
-   */
+  /** Actualiza una actividad existente */
   actualizarActividad(id: number, actividad: Partial<ActividadPayload>): Observable<ActividadCompleta> {
     return this.http.put<ActividadCompleta>(`${this.apiUrl}/actividades/${id}`, actividad, this.httpOptions);
   }
 
-  /** 
-   * Elimina una actividad, sus referencias asociadas y limpia la imagen del Storage.
-   */
+  /** Elimina una actividad y limpia sus dependencias */
   eliminarActividad(id: number): Observable<{ mensaje: string }> {
     return this.http.delete<{ mensaje: string }>(`${this.apiUrl}/actividades/${id}`);
+  }
+
+  // ==========================================
+  // CRUD DE PREMIOS
+  // ==========================================
+
+  /** Obtiene el listado completo de premios con sus datos anidados */
+  getPremios(): Observable<PremioCompleto[]> {
+    return this.http.get<PremioCompleto[]>(`${this.apiUrl}/premios`);
+  }
+
+  /** Obtiene un premio específico según su ID */
+  getPremioPorId(id: number): Observable<PremioCompleto> {
+    return this.http.get<PremioCompleto>(`${this.apiUrl}/premios/${id}`);
+  }
+
+  /** Registra un nuevo premio y su stock inicial en la sede correspondiente */
+  crearPremio(premio: PremioPayload): Observable<PremioCompleto> {
+    return this.http.post<PremioCompleto>(`${this.apiUrl}/premios`, premio, this.httpOptions);
+  }
+
+  /** Actualiza un premio existente y/o su stock */
+  actualizarPremio(id: number, premio: Partial<PremioPayload>): Observable<PremioCompleto> {
+    return this.http.put<PremioCompleto>(`${this.apiUrl}/premios/${id}`, premio, this.httpOptions);
+  }
+
+  /** Elimina un premio, su registro de stock e imagen asociada */
+  eliminarPremio(id: number): Observable<{ mensaje: string }> {
+    return this.http.delete<{ mensaje: string }>(`${this.apiUrl}/premios/${id}`);
   }
 }

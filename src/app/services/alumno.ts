@@ -1,93 +1,250 @@
-import { Injectable } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
-import { Observable, BehaviorSubject } from 'rxjs';
+  import { Injectable } from '@angular/core';
+  import { HttpClient } from '@angular/common/http';
+  import { Observable, BehaviorSubject, of } from 'rxjs';
+  import { tap, catchError } from 'rxjs/operators';
 
-@Injectable({ providedIn: 'root' })
-export class AlumnoService {
-  private apiUrl = 'http://localhost:3000/alumnos';
-  private authUrl = 'http://localhost:3000/auth'; 
-
-  // 💡 ESTADO REACTIVO DE SESIÓN
-  private usuarioSubject = new BehaviorSubject<any>(this.obtenerUsuarioSesion());
-  public usuario$ = this.usuarioSubject.asObservable();
-
-  constructor(private http: HttpClient) { }
-
-  getAlumnos(): Observable<any> {
-    return this.http.get(this.apiUrl);
+  export interface AlumnoPayload {
+    rut_usuario: string;
+    nombre_completo: string;
+    genero?: string;
+    correo: string;
+    direccion?: string;
+    telefono?: number | string;
+    fecha_nacimiento?: string;
+    jornada?: string;
+    tipo_carrera?: string;
+    periodo_academico?: string;
+    id_tipo_usuario?: number;
+    id_periodo_academico?: number;
+    id_estado_matricula?: number;
+    id_comuna?: number;
+    id_sede?: number;
+    id_escuela?: number;
+    id_carrera?: number;
+    id_requisito?: number;
+    puntaje_total?: number;
+    actividades_inscritas?: number;
+    historial_academico_resumen?: string;
+    matriculado?: boolean;
+    suspension?: boolean;
+    sumario?: boolean;
+    cumple?: boolean;
+    observacion?: string;
   }
 
-  addAlumno(alumno: any): Observable<any> {
-    return this.http.post(this.apiUrl, alumno);
+  export interface HistorialPayload {
+    rut_usuario: string;
+    descripcion: string;
+    id_escuela?: number;
   }
 
-  editAlumno(rut: string, alumno: any): Observable<any> {
-    return this.http.put(`${this.apiUrl}/${rut}`, alumno);
-  }
+  @Injectable({ providedIn: 'root' })
+  export class AlumnoService {
+    private baseUrl = 'http://localhost:3000';
 
-  deleteAlumno(rut: string): Observable<any> {
-    return this.http.delete(`${this.apiUrl}/${rut}`);
-  }
+    // ESTADO REACTIVO DE SESIÓN
+    private usuarioSubject = new BehaviorSubject<any>(this.obtenerUsuarioSesion());
+    public usuario$ = this.usuarioSubject.asObservable();
 
-  // ==========================================
-  // MÉTODOS DE AUTENTICACIÓN Y SESIÓN
-  // ==========================================
+    constructor(private http: HttpClient) { }
 
-  login(credenciales: any): Observable<any> {
-    return this.http.post(`${this.authUrl}/login`, credenciales);
-  }
+    // ==========================================
+    // HELPER PARA EMPAQUETAR FORM DATA
+    // ==========================================
 
-guardarSesion(respuestaLogin: any) {
-  if (!respuestaLogin) {
-    console.error('La respuesta de login está vacía');
-    return;
-  }
+    private construirPayload(alumnoData: AlumnoPayload | FormData, foto?: File): FormData | AlumnoPayload {
+      if (alumnoData instanceof FormData) {
+        return alumnoData;
+      }
 
-  // Detectamos si el usuario viene envuelto en .usuario o viene directamente
-  const usuario = respuestaLogin.usuario || (respuestaLogin.rut_usuario ? respuestaLogin : null);
-  const token = respuestaLogin.token_acceso;
+      if (foto) {
+        const formData = new FormData();
+        formData.append('foto', foto, foto.name);
+        formData.append('datos', JSON.stringify(alumnoData));
+        return formData;
+      }
 
-  if (usuario) {
-    localStorage.setItem('usuarioLogueado', JSON.stringify(usuario));
-    
-    if (token) {
-      localStorage.setItem('tokenAcceso', token);
+      return alumnoData;
     }
 
-    this.usuarioSubject.next(usuario);
-    console.log('✅ Sesión guardada exitosamente:', usuario);
-  } else {
-    console.error('Intento de guardar una sesión con datos inválidos:', respuestaLogin);
-  }
-}
+    // ==========================================
+    // MÉTODOS DE GESTIÓN DE ALUMNOS Y FICHAS
+    // ==========================================
 
-  obtenerUsuarioSesion() {
-    const user = localStorage.getItem('usuarioLogueado');
-
-    // 🛑 Blindaje contra "undefined", null o valores vacíos
-    if (!user || user === 'undefined' || user === 'null') {
-      return null;
+    getAlumnos(): Observable<any[]> {
+      return this.http.get<any[]>(`${this.baseUrl}/alumnos`);
     }
 
-    try {
-      return JSON.parse(user);
-    } catch (error) {
-      console.error('Error al parsear el usuario de la sesión:', error);
-      this.cerrarSesion(); // Si el JSON está corrupto, limpiamos
-      return null;
+    getAlumnoByRut(rut: string): Observable<any> {
+      return this.http.get<any>(`${this.baseUrl}/alumnos/${rut}`);
+    }
+
+    addAlumno(alumnoData: AlumnoPayload | FormData, foto?: File): Observable<any> {
+      const payload = this.construirPayload(alumnoData, foto);
+      return this.http.post<any>(`${this.baseUrl}/alumnos`, payload);
+    }
+
+    editAlumno(rut: string, alumnoData: AlumnoPayload | FormData, foto?: File): Observable<any> {
+      const payload = this.construirPayload(alumnoData, foto);
+      return this.http.put<any>(`${this.baseUrl}/alumnos/${rut}`, payload);
+    }
+
+    deleteAlumno(rut: string) {
+      // Elimina los puntos del RUT dejando solo números y dígito verificador (ej: "22222222-2")
+      const rutLimpio = rut.replace(/\./g, '');
+      
+      return this.http.delete(`${this.baseUrl}/alumnos/${encodeURIComponent(rutLimpio)}`);
+    }
+
+    // ==========================================
+    // MÉTODOS DE HISTORIAL ACADÉMICO
+    // ==========================================
+
+    getHistorialByRut(rut: string): Observable<any[]> {
+      return this.http.get<any[]>(`${this.baseUrl}/alumnos/historial_academico/${rut}`);
+    }
+
+    addHistorial(data: HistorialPayload): Observable<any> {
+      return this.http.post<any>(`${this.baseUrl}/alumnos/historial_academico`, data);
+    }
+
+    deleteHistorial(idHistorial: number): Observable<any> {
+      return this.http.delete<any>(`${this.baseUrl}/alumnos/historial_academico/${idHistorial}`);
+    }
+
+    // ==========================================
+    // MÉTODOS DE GESTIÓN DE CATÁLOGOS Y CARRERAS
+    // ==========================================
+
+    getCarreras(): Observable<any[]> {
+      return this.http.get<any[]>(`${this.baseUrl}/carreras`);
+    }
+
+    getCarrerasByEscuela(idEscuela: number): Observable<any[]> {
+      return this.http.get<any[]>(`${this.baseUrl}/carreras/escuela/${idEscuela}`);
+    }
+
+    getEscuelas(): Observable<any[]> {
+      return this.http.get<any[]>(`${this.baseUrl}/escuelas`);
+    }
+
+    getSedes(): Observable<any[]> {
+      return this.http.get<any[]>(`${this.baseUrl}/sedes`);
+    }
+
+    getJornadas(): Observable<any[]> {
+      return this.http.get<any[]>(`${this.baseUrl}/jornadas`);
+    }
+
+    getTiposCarrera(): Observable<any[]> {
+      return this.http.get<any[]>(`${this.baseUrl}/tipos-carrera`);
+    }
+
+    getEstadosMatricula(): Observable<any[]> {
+      return this.http.get<any[]>(`${this.baseUrl}/estados-matricula`);
+    }
+
+    getPeriodosAcademicos(): Observable<any[]> {
+      return this.http.get<any[]>(`${this.baseUrl}/periodos-academicos`);
+    }
+
+    // ==========================================
+    // MÉTODOS DE AUTENTICACIÓN Y RECUPERACIÓN
+    // ==========================================
+
+    login(credenciales: { correo: string; password: string }): Observable<any> {
+      return this.http.post(`${this.baseUrl}/auth/login`, credenciales).pipe(
+        tap((res: any) => {
+          if (res && res.usuario) {
+            this.guardarSesion(res);
+          }
+        })
+      );
+    }
+
+    solicitarRecuperacion(correo: string): Observable<any> {
+      return this.http.post(`${this.baseUrl}/auth/solicitar-recuperacion`, { correo });
+    }
+
+    restablecerPassword(datos: { token: string; nuevaContrasenia: string }): Observable<any> {
+      return this.http.post(`${this.baseUrl}/auth/restablecer-password`, datos);
+    }
+
+    logout(): Observable<any> {
+      const usuario = this.obtenerUsuarioSesion();
+      const rut_usuario = usuario?.rut_usuario;
+
+      if (rut_usuario) {
+        return this.http.post(`${this.baseUrl}/auth/logout`, { rut_usuario }).pipe(
+          tap(() => this.limpiarSesionLocal()),
+          catchError(() => {
+            this.limpiarSesionLocal();
+            return of(null);
+          })
+        );
+      }
+
+      this.limpiarSesionLocal();
+      return of(null);
+    }
+
+    // ==========================================
+    // CONTROL DE SESIÓN Y LOCALSTORAGE
+    // ==========================================
+
+    guardarSesion(respuestaLogin: any) {
+      if (!respuestaLogin) {
+        console.error('La respuesta de login está vacía');
+        return;
+      }
+
+      const usuario = respuestaLogin.usuario || (respuestaLogin.rut_usuario ? respuestaLogin : null);
+      const token = respuestaLogin.token_acceso;
+
+      if (usuario) {
+        localStorage.setItem('usuarioLogueado', JSON.stringify(usuario));
+
+        if (token) {
+          localStorage.setItem('tokenAcceso', token);
+        }
+
+        this.usuarioSubject.next(usuario);
+      } else {
+        console.error('Intento de guardar una sesión con datos inválidos:', respuestaLogin);
+      }
+    }
+
+    obtenerUsuarioSesion(): any {
+      const user = localStorage.getItem('usuarioLogueado');
+
+      if (!user || user === 'undefined' || user === 'null') {
+        return null;
+      }
+
+      try {
+        return JSON.parse(user);
+      } catch (error) {
+        console.error('Error al parsear el usuario de la sesión:', error);
+        this.limpiarSesionLocal();
+        return null;
+      }
+    }
+
+    obtenerToken(): string | null {
+      return localStorage.getItem('tokenAcceso');
+    }
+
+    estaLogueado(): boolean {
+      return this.obtenerUsuarioSesion() !== null;
+    }
+
+    limpiarSesionLocal() {
+      localStorage.removeItem('usuarioLogueado');
+      localStorage.removeItem('tokenAcceso');
+      this.usuarioSubject.next(null);
+    }
+
+    cerrarSesion() {
+      this.logout().subscribe();
     }
   }
-
-  estaLogueado(): boolean {
-    return this.obtenerUsuarioSesion() !== null;
-  }
-
-  cerrarSesion() {
-    // Limpiamos todo el almacenamiento local de autenticación
-    localStorage.removeItem('usuarioLogueado');
-    localStorage.removeItem('tokenAcceso');
-    
-    // 📢 Notificamos a los suscriptores que ya no hay usuario en sesión
-    this.usuarioSubject.next(null);
-  }
-}

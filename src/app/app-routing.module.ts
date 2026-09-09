@@ -25,10 +25,17 @@ const routes: Routes = [
     path: 'admin-actividades',
     loadChildren: () => import('./pages/admin-actividades/admin-actividades.module').then( m => m.AdminActividadesPageModule),
     canActivate: [authGuard]
-  },  {
+  },
+  {
     path: 'recuperar',
     loadChildren: () => import('./pages/recuperar/recuperar.module').then( m => m.RecuperarPageModule)
+  },
+  {
+    path: 'admin-premios',
+    loadChildren: () => import('./pages/admin-premios/admin-premios.module').then( m => m.AdminPremiosPageModule),
+    canActivate: [authGuard]
   }
+
 
 
 

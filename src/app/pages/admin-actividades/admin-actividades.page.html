@@ -1,9 +1,8 @@
 <app-header></app-header>
 
-<ion-content [fullscreen]="true">
+<ion-content>
   <div class="container ion-padding">
 
-    <!-- BARRA DE BÚSQUEDA Y BOTÓN AGREGAR -->
     <div class="search-action-bar">
       <ion-searchbar 
         [(ngModel)]="busquedaActividad" 
@@ -18,12 +17,13 @@
       </ion-button>
     </div>
 
-    <!-- LISTA DE ACTIVIDADES -->
     <div class="cards-grid">
       <ion-card class="card-item" *ngFor="let act of actividadesFiltradas">
-        <!-- Banner de Imagen -->
-        <div class="card-image-container" *ngIf="act.img_actv">
-          <img [src]="act.img_actv" [alt]="act.nombre_actividad" />
+        <div class="card-image-container">
+          <img 
+            [src]="act.img_actv || imgDefault" 
+            (error)="onImgError($event)"
+            [alt]="act.nombre_actividad" />
           <span class="badge-puntos" *ngIf="act.puntaje_act?.length">
             <ion-icon name="trophy-outline"></ion-icon>
             {{ act.puntaje_act[0]?.cantidad }} Pts
@@ -31,7 +31,6 @@
         </div>
 
         <ion-card-content>
-          <!-- Encabezado de Tarjeta -->
           <div class="fila-superior">
             <h2>{{ act.nombre_actividad }}</h2>
             <span class="estado-badge" [ngClass]="(act.estado_actividad?.descripcion || 'programada') | lowercase">
@@ -39,7 +38,6 @@
             </span>
           </div>
 
-          <!-- Detalles -->
           <div class="detalle-actividad">
             <p class="descripcion-text">{{ act.descripcion }}</p>
             
@@ -70,7 +68,6 @@
 
           <hr class="divisor-tarjeta" />
 
-          <!-- Acciones -->
           <div class="acciones">
             <ion-button fill="clear" class="btn-editar" (click)="prepararEdicion(act, modalEdicion)">
               <ion-icon name="create-outline" slot="start"></ion-icon>
@@ -86,14 +83,13 @@
       </ion-card>
     </div>
 
-    <!-- ESTADO VACÍO -->
     <div *ngIf="actividadesFiltradas.length === 0" class="empty-state">
       <ion-icon name="folder-open-outline"></ion-icon>
       <p>No se encontraron actividades registradas.</p>
     </div>
   </div>
 
-  <!-- ==================== MODAL DE CREACIÓN ==================== -->
+  <!-- Modal Agregar -->
   <ion-modal #modalAgregar class="custom-modal">
     <ng-template>
       <ion-header class="ion-no-border">
@@ -108,11 +104,13 @@
       <ion-content class="modal-content">
         <div class="formulario-modal">
 
-          <!-- Subida de Imagen con Previsualización -->
           <div class="upload-avatar-section">
             <div class="preview-uploader">
-              <img *ngIf="formulario.img_actv" [src]="formulario.img_actv" class="preview-img" />
-              <ion-icon *ngIf="!formulario.img_actv" name="image-outline"></ion-icon>
+              <img 
+                [src]="formulario.img_actv || imgDefault" 
+                (error)="onImgError($event)"
+                class="preview-img" 
+                [alt]="formulario.nombre_actividad || 'Previsualización'" />
             </div>
             
             <div class="upload-buttons">
@@ -127,7 +125,6 @@
             <input #fileInputAdd type="file" (change)="seleccionarImagen($event, 'agregar')" accept="image/*" hidden />
           </div>
 
-          <!-- Campos en Grilla -->
           <ion-grid class="ion-no-padding">
             <ion-row>
               <ion-col size="12">
@@ -151,7 +148,6 @@
                   <ion-icon name="search-outline" slot="end" class="input-icon"></ion-icon>
                 </ion-item>
               </ion-col>
-
 
               <ion-col size="12" size-md="6">
                 <ion-item class="input-modal" lines="none">
@@ -226,7 +222,7 @@
     </ng-template>
   </ion-modal>
 
-  <!-- ==================== MODAL DE EDICIÓN ==================== -->
+  <!-- Modal Editar -->
   <ion-modal #modalEdicion class="custom-modal">
     <ng-template>
       <ion-header class="ion-no-border">
@@ -241,11 +237,13 @@
       <ion-content class="modal-content">
         <div class="formulario-modal">
 
-          <!-- Subida de Imagen -->
           <div class="upload-avatar-section">
             <div class="preview-uploader">
-              <img *ngIf="formularioEdicion.img_actv" [src]="formularioEdicion.img_actv" class="preview-img" />
-              <ion-icon *ngIf="!formularioEdicion.img_actv" name="image-outline"></ion-icon>
+              <img 
+                [src]="formularioEdicion.img_actv || imgDefault" 
+                (error)="onImgError($event)"
+                class="preview-img" 
+                [alt]="formularioEdicion.nombre_actividad || 'Previsualización'" />
             </div>
             
             <div class="upload-buttons">
@@ -260,7 +258,6 @@
             <input #fileInputEdit type="file" (change)="seleccionarImagen($event, 'editar')" accept="image/*" hidden />
           </div>
 
-          <!-- Campos en Grilla -->
           <ion-grid class="ion-no-padding">
             <ion-row>
               <ion-col size="12">
@@ -367,7 +364,7 @@
     </ng-template>
   </ion-modal>
 
-  <!-- ==================== MODAL BÚSQUEDA DE DOCENTES ==================== -->
+  <!-- Modal Docentes -->
   <ion-modal #modalDocentes class="custom-modal">
     <ng-template>
       <ion-header class="ion-no-border">

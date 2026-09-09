@@ -11,6 +11,9 @@ import { ActividadService, ActividadPayload } from '../../services/actividad';
 export class AdminActividadesPage implements OnInit {
   @ViewChild('modalDocentes') modalDocentes!: IonModal;
 
+  // Imagen vectorial por defecto (SVG en Base64/DataURL) para evitar depender de archivos locales
+  readonly imgDefault: string = '../../../assets/image_38683be5.png';
+
   modoFormulario: 'agregar' | 'editar' = 'agregar';
   busquedaActividad: string = '';
   busquedaDocente: string = '';
@@ -58,50 +61,55 @@ export class AdminActividadesPage implements OnInit {
     this.cargarActividades();
   }
 
+  // Maneja imágenes con enlaces rotos o inexistentes en las tarjetas/modales
+  onImgError(event: Event) {
+    (event.target as HTMLImageElement).src = this.imgDefault;
+  }
+
   // Carga inicial de datos desde los endpoints de catálogo
-cargarCatalogos() {
-  // 1. Cargar Sedes (Asigna 'descripcion' para que coincida con tu HTML)
-  this.actividadService.getSedes().subscribe({
-    next: (data: any) => {
-      const sedesRaw = Array.isArray(data) ? data : (data?.data || []);
-      
-      this.listaSedes = sedesRaw.map((s: any) => ({
-        id_sede: Number(s.id_sede ?? s.id ?? s.id_sede_act),
-        descripcion: s.descripcion || s.nombre_sede || s.nombre || s.lugar || 'Sede sin nombre'
-      }));
-    },
-    error: (err) => {
-      console.error('Error al cargar sedes:', err);
-      this.mostrarToast('Error al cargar sedes desde la BD', 'danger');
-    }
-  });
+  cargarCatalogos() {
+    // 1. Cargar Sedes
+    this.actividadService.getSedes().subscribe({
+      next: (data: any) => {
+        const sedesRaw = Array.isArray(data) ? data : (data?.data || []);
+        
+        this.listaSedes = sedesRaw.map((s: any) => ({
+          id_sede: Number(s.id_sede ?? s.id ?? s.id_sede_act),
+          descripcion: s.descripcion || s.nombre_sede || s.nombre || s.lugar || 'Sede sin nombre'
+        }));
+      },
+      error: (err) => {
+        console.error('Error al cargar sedes:', err);
+        this.mostrarToast('Error al cargar sedes desde la BD', 'danger');
+      }
+    });
 
-  // 2. Cargar Tipos
-  this.actividadService.getTiposActividad().subscribe({
-    next: (data: any) => this.listaTipos = Array.isArray(data) ? data : (data?.data || []),
-    error: (err) => console.error('Error al cargar tipos:', err)
-  });
+    // 2. Cargar Tipos
+    this.actividadService.getTiposActividad().subscribe({
+      next: (data: any) => this.listaTipos = Array.isArray(data) ? data : (data?.data || []),
+      error: (err) => console.error('Error al cargar tipos:', err)
+    });
 
-  // 3. Cargar Estados
-  this.actividadService.getEstadosActividad().subscribe({
-    next: (data: any) => this.listaEstados = Array.isArray(data) ? data : (data?.data || []),
-    error: (err) => console.error('Error al cargar estados:', err)
-  });
+    // 3. Cargar Estados
+    this.actividadService.getEstadosActividad().subscribe({
+      next: (data: any) => this.listaEstados = Array.isArray(data) ? data : (data?.data || []),
+      error: (err) => console.error('Error al cargar estados:', err)
+    });
 
-  // 4. Cargar Docentes
-  this.actividadService.getDocentes().subscribe({
-    next: (data: any) => {
-      const docentesRaw = Array.isArray(data) ? data : (data?.data || []);
-      this.listaDocentes = docentesRaw.map((doc: any) => ({
-        ...doc,
-        rut_usuario: doc.rut_usuario || doc.rut || doc.rut_docente || 'S/R',
-        nombre_completo: doc.nombre_completo || `${doc.p_nombre || doc.nombre || ''} ${doc.p_apellido || doc.apellido || ''}`.trim()
-      }));
-      this.docentesFiltrados = [...this.listaDocentes];
-    },
-    error: (err) => console.error('Error al cargar docentes:', err)
-  });
-}
+    // 4. Cargar Docentes
+    this.actividadService.getDocentes().subscribe({
+      next: (data: any) => {
+        const docentesRaw = Array.isArray(data) ? data : (data?.data || []);
+        this.listaDocentes = docentesRaw.map((doc: any) => ({
+          ...doc,
+          rut_usuario: doc.rut_usuario || doc.rut || doc.rut_docente || 'S/R',
+          nombre_completo: doc.nombre_completo || `${doc.p_nombre || doc.nombre || ''} ${doc.p_apellido || doc.apellido || ''}`.trim()
+        }));
+        this.docentesFiltrados = [...this.listaDocentes];
+      },
+      error: (err) => console.error('Error al cargar docentes:', err)
+    });
+  }
 
   cargarActividades() {
     this.actividadService.getActividades().subscribe({
@@ -212,9 +220,25 @@ cargarCatalogos() {
   }
 
   private formatearFechaISO(fechaStr: string): string {
-    if (!fechaStr || fechaStr.trim() === '') return new Date().toISOString();
-    const d = new Date(fechaStr);
-    return isNaN(d.getTime()) ? new Date().toISOString() : d.toISOString();
+    if (!fechaStr || !fechaStr.trim()) {
+      const d = new Date();
+      const pad = (n: number) => n.toString().padStart(2, '0');
+      return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}:00`;
+    }
+
+    let limpia = fechaStr.split('Z')[0];
+    const partes = limpia.split('T');
+    
+    if (partes.length === 2) {
+      const horaLimpia = partes[1].split('+')[0].split('-')[0];
+      limpia = `${partes[0]}T${horaLimpia}`;
+    }
+
+    if (limpia.length === 16) {
+      limpia += ':00';
+    }
+
+    return limpia.slice(0, 19);
   }
 
   private construirPayload(f: any): ActividadPayload {
