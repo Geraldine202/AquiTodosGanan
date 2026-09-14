@@ -1,265 +1,187 @@
-.toolbar-duoc {
-  --background: #111;
-  --color: white;
-  padding-left: 10px;
-  padding-right: 10px;
-  border-bottom: 1px solid rgba(255,255,255,0.1);
-}
+.admin-dashboard-content {
+  --background: #f4f6f9;
 
-.header-contenido {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  width: 100%;
-}
+  .welcome-banner {
+    background: linear-gradient(135deg, #001529 0%, #002b4d 100%);
+    color: #ffffff;
+    padding-top: 20px;
+    padding-bottom: 24px;
+    border-bottom-left-radius: 16px;
+    border-bottom-right-radius: 16px;
+    margin-bottom: 16px;
+    box-shadow: 0 4px 12px rgba(0, 21, 41, 0.15);
 
-.lado-izquierdo,
-.lado-derecho {
-  display: flex;
-  align-items: center;
-}
+    .role-badge {
+      font-size: 0.72rem;
+      padding: 4px 8px;
+      border-radius: 12px;
+      margin-bottom: 8px;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
 
-.grupo-clima-menu {
-  display: flex;
-  align-items: center;
-  gap: 0;
-}
+    h1 {
+      margin: 4px 0;
+      font-size: 1.5rem;
+      font-weight: 700;
+    }
 
-.clima-box {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  color: white;
-  font-size: 13px;
-  font-weight: 400;
-  background: rgba(255, 255, 255, 0.15);
-  padding: 6px 10px;
-  border-radius: 20px;
-  margin-left: -4px;
-}
-
-.btn-login {
-  --color: white;
-  font-weight: 500;
-  font-size: 14px;
-  text-transform: none;
-  border: 1px solid rgba(255,255,255,0.3);
-  border-radius: 20px;
-  padding: 0 10px;
-}
-
-.logo-duoc {
-  height: 36px;
-  width: auto;
-  object-fit: contain;
-  display: block;
-  margin-left: 8px;
-}
-
-.menu-blanco {
-  --color: white;
-}
-
-.contenedor-home {
-  text-align: center;
-  margin-top: 50px;
-}
-
-h1 {
-  font-size: 28px;
-  font-weight: 600;
-  margin-bottom: 10px;
-}
-
-p {
-  font-size: 16px;
-  font-weight: 300;
-  color: #666;
-}
-
-ion-toolbar {
-  --min-height: 60px;
-}
-
-/*Tarjetas*/
-.grid-home {
-  padding: 0 8px 24px 8px;
-}
-
-.card-home {
-  text-align: center;
-  padding: 20px 10px;
-}
-
-.card-home ion-icon {
-  font-size: 40px;
-  margin-bottom: 10px;
-  color: #f58220;
-}
-
-.card-home p {
-  margin: 0;
-  font-weight: 500;
-  color: #333;
-}
-
-ion-card {
-  border-radius: 16px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-}
-
-/*Carrusel*/
-.carrusel-wrapper {
-  width: 100%;
-  padding: 12px 12px 0 12px;
-}
-
-.home-swiper {
-  width: 100%;
-  height: 500px;
-  display: block;
-  border-radius: 18px;
-  overflow: hidden;
-
-  --swiper-navigation-color: #ffffff;
-  --swiper-pagination-color: #ffffff;
-  --swiper-pagination-bullet-inactive-color: rgba(255, 255, 255, 0.5);
-}
-
-.home-swiper img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  display: block;
-}
-
-/*Footer*/
-
-.footer-duoc {
-  background: #111;
-  color: white;
-  margin-top: 40px;
-  padding-top: 50px;
-}
-
-.footer-top {
-  display: grid;
-  grid-template-columns: 1fr 1fr 1fr;
-  gap: 40px;
-  padding: 0 32px 40px 32px;
-}
-
-.footer-col h3 {
-  color: #f5b400;
-  font-size: 18px;
-  font-weight: 500;
-  margin-bottom: 8px;
-}
-
-.linea-titulo {
-  width: 100%;
-  height: 2px;
-  background: linear-gradient(to right, #f5b400 35%, #5a4a00 35%);
-  margin-bottom: 24px;
-}
-
-.footer-col h4 {
-  font-size: 16px;
-  font-weight: 600;
-  margin: 18px 0 8px 0;
-  text-transform: uppercase;
-}
-
-.footer-col p,
-.footer-col li,
-.footer-col a {
-  font-size: 14px;
-  color: white;
-  text-decoration: none;
-  line-height: 1.8;
-}
-
-.footer-col ul {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-}
-
-.footer-col a:hover {
-  text-decoration: underline;
-}
-
-.btn-contacto {
-  --color: white;
-  --border-color: white;
-  --border-radius: 24px;
-  font-size: 13px;
-  margin-bottom: 24px;
-}
-
-.btn-contacto ion-icon {
-  margin-left: 6px;
-}
-
-.footer-bloque {
-  border-bottom: 1px solid rgba(255, 255, 255, 0.4);
-  padding-bottom: 14px;
-  margin-bottom: 18px;
-}
-
-.footer-redes {
-  display: flex;
-  gap: 18px;
-  font-size: 24px;
-  margin-top: 28px;
-}
-
-.footer-redes ion-icon {
-  cursor: pointer;
-}
-
-.mt {
-  margin-top: 34px;
-}
-
-.footer-bottom {
-  border-top: 1px solid rgba(255, 255, 255, 0.35);
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 18px 32px;
-  gap: 20px;
-}
-
-.logo-footer {
-  height: 64px;
-  width: auto;
-  object-fit: contain;
-}
-
-.logo-acreditacion {
-  height: 72px;
-  width: auto;
-  object-fit: contain;
-}
-
-/* Responsive */
-@media (max-width: 900px) {
-  .footer-top {
-    grid-template-columns: 1fr;
-    gap: 30px;
+    p {
+      margin: 0;
+      color: #b0c4de;
+      font-size: 0.88rem;
+    }
   }
 
-  .footer-bottom {
-    flex-direction: column;
-    align-items: flex-start;
+  .section-title {
+    display: block;
+    font-size: 1rem;
+    font-weight: 700;
+    color: #001529;
+    margin: 16px 4px 8px;
   }
 
-  .logo-footer {
-    height: 54px;
+  .kpi-grid {
+    padding: 0;
+
+    .kpi-card {
+      margin: 4px;
+      border-radius: 12px;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
+      border: 1px solid rgba(0, 0, 0, 0.05);
+
+      ion-card-content {
+        padding: 12px;
+      }
+
+      .kpi-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 8px;
+
+        ion-icon {
+          font-size: 1.6rem;
+        }
+
+        .kpi-badge {
+          font-size: 0.68rem;
+          background: #e3f2fd;
+          color: #1976d2;
+          padding: 2px 6px;
+          border-radius: 4px;
+          font-weight: 600;
+
+          &.success { background: #e8f5e9; color: #2e7d32; }
+          &.warning { background: #fff3e0; color: #e65100; }
+          &.alert   { background: #f3e5f5; color: #7b1fa2; }
+        }
+      }
+
+      .kpi-body {
+        h3 {
+          margin: 0;
+          font-size: 1.5rem;
+          font-weight: 800;
+          color: #1a1a1a;
+        }
+
+        p {
+          margin: 2px 0 0;
+          font-size: 0.75rem;
+          color: #666;
+          font-weight: 500;
+        }
+      }
+
+      &.color-blue ion-icon { color: #1890ff; }
+      &.color-green ion-icon { color: #52c41a; }
+      &.color-orange ion-icon { color: #fa8c16; }
+      &.color-purple ion-icon { color: #722ed1; }
+    }
   }
 
-  .logo-acreditacion {
-    height: 60px;
+  .grid-actions {
+    padding: 0;
+
+    .action-card {
+      margin: 6px 4px;
+      border-radius: 12px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+      cursor: pointer;
+
+      ion-card-content {
+        display: flex;
+        align-items: center;
+        padding: 14px;
+        gap: 12px;
+
+        .action-icon {
+          width: 44px;
+          height: 44px;
+          border-radius: 10px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          flex-shrink: 0;
+
+          ion-icon {
+            font-size: 1.4rem;
+            color: #ffffff;
+          }
+
+          &.icon-blue { background: linear-gradient(135deg, #1890ff, #096dd9); }
+          &.icon-green { background: linear-gradient(135deg, #52c41a, #389e0d); }
+          &.icon-orange { background: linear-gradient(135deg, #fa8c16, #d46b08); }
+          &.icon-purple { background: linear-gradient(135deg, #722ed1, #531dab); }
+        }
+
+        .action-text {
+          flex: 1;
+
+          h3 {
+            margin: 0 0 2px;
+            font-size: 0.95rem;
+            font-weight: 700;
+            color: #001529;
+          }
+
+          p {
+            margin: 0;
+            font-size: 0.78rem;
+            color: #666;
+          }
+        }
+
+        .arrow-icon {
+          color: #bfbfbf;
+          font-size: 1.1rem;
+        }
+      }
+    }
+  }
+
+  .recent-section {
+    margin-top: 10px;
+    margin-bottom: 20px;
+
+    .recent-card {
+      border-radius: 12px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+
+      ion-card-title {
+        font-size: 0.95rem;
+        font-weight: 700;
+        color: #001529;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+
+        ion-icon {
+          color: #1890ff;
+        }
+      }
+    }
   }
 }

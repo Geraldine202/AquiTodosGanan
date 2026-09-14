@@ -78,10 +78,18 @@
             routerLink="/admin-premios" 
             routerLinkActive="menu-item-activo"
             class="menu-item-custom">
-            <ion-icon name="calendar-outline" slot="start" class="menu-icon"></ion-icon>
+            <ion-icon name="gift-outline" slot="start" class="menu-icon"></ion-icon>
             <ion-label class="menu-label notranslate" translate="no">Administrar Premios</ion-label>
           </ion-item>
-
+          <ion-item 
+            button
+            (click)="cerrarMenu()" 
+            routerLink="/admin-premios" 
+            routerLinkActive="menu-item-activo"
+            class="menu-item-custom">
+            <ion-icon name="bar-chart-outline" slot="start" class="menu-icon"></ion-icon>
+            <ion-label class="menu-label notranslate" translate="no">Generar reporte (pendiente)</ion-label>
+          </ion-item>
         </ion-list>
       </div>
     </ion-content>

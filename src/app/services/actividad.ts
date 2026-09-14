@@ -215,7 +215,9 @@ subirImagen(
   getPremios(): Observable<PremioCompleto[]> {
     return this.http.get<PremioCompleto[]>(`${this.apiUrl}/premios`);
   }
-
+  getSolicitudesCanje(): Observable<any[]> {
+    return this.http.get<any[]>(`${this.apiUrl}/solicitudes-canje`);
+  }
   /** Obtiene un premio específico según su ID */
   getPremioPorId(id: number): Observable<PremioCompleto> {
     return this.http.get<PremioCompleto>(`${this.apiUrl}/premios/${id}`);
