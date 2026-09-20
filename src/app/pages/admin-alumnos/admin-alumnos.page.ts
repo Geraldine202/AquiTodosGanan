@@ -1,5 +1,6 @@
 import { Component, OnInit, ViewChild } from '@angular/core';
 import { AlumnoService, HistorialPayload } from 'src/app/services/alumno'; 
+import { ActividadService } from 'src/app/services/actividad';
 import { AlertController, ToastController, IonModal } from '@ionic/angular';
 import { firstValueFrom } from 'rxjs';
 
@@ -15,6 +16,9 @@ export class AdminAlumnosPage implements OnInit {
 
   alumnos: any[] = []; 
   alumnosFiltrados: any[] = [];
+
+  // Control para el segmento: 'todos' | 'alumnos' | 'consejeros'
+  filtroApartado: string = 'todos';
 
   carreras: any[] = [];
   escuelas: any[] = [];
@@ -62,6 +66,7 @@ export class AdminAlumnosPage implements OnInit {
 
   constructor(
     private alumnoService: AlumnoService, 
+    private actividadService: ActividadService,
     private alertController: AlertController,
     private toastController: ToastController
   ) { }
@@ -80,10 +85,113 @@ export class AdminAlumnosPage implements OnInit {
     return [];
   }
 
+  /**
+   * Extrae el ID del rol/tipo de usuario buscando en múltiples propiedades posibles
+   */
+  obtenerTipoUsuario(alu: any): number {
+    const val = alu?.id_tipo_usuario ?? 
+                alu?.tipo_usuario?.id_tipo_usuario ?? 
+                alu?.id_rol ?? 
+                alu?.rol?.id_rol ?? 
+                1;
+    return Number(val);
+  }
+
+  /**
+   * Normaliza cualquier RUT al formato estándar con puntos y guión (XX.XXX.XXX-X)
+   */
+  private formatearRutChile(rut: string): string {
+    if (!rut) return '';
+    const limpio = rut.replace(/[^0-9kK]/g, '').toUpperCase();
+    if (limpio.length < 2) return rut;
+
+    const cuerpo = limpio.slice(0, -1);
+    const dv = limpio.slice(-1);
+    const cuerpoFormateado = Number(cuerpo).toLocaleString('es-CL');
+
+    return `${cuerpoFormateado}-${dv}`;
+  }
+
+  /**
+   * Extrae dinámicamente el puntaje total del alumno soportando
+   * números simples, arreglos devueltos por el backend o relaciones.
+   */
+  obtenerPuntajeReal(alu: any): number {
+    if (!alu) return 0;
+
+    if (typeof alu.puntaje_total === 'number') return alu.puntaje_total;
+
+    if (Array.isArray(alu.puntaje_total)) {
+      if (alu.puntaje_total.length === 0) return 0;
+      return alu.puntaje_total.reduce((acc: number, curr: any) => {
+        const val = typeof curr === 'number' ? curr : (curr?.puntaje || curr?.puntaje_total || 0);
+        return acc + Number(val);
+      }, 0);
+    }
+
+    if (typeof alu.puntaje_total === 'object' && alu.puntaje_total !== null) {
+      return Number(alu.puntaje_total.puntaje || alu.puntaje_total.total || 0);
+    }
+
+    return Number(alu.puntaje_total) || 0;
+  }
+
+  /**
+   * Obtiene el conteo real de actividades del backend únicamente si el usuario
+   * tiene un rol que permite estar a cargo de actividades (IDs 2, 3 o 4).
+   */
+  async obtenerActividadesReales(alu: any): Promise<number> {
+    if (!alu || !alu.rut_usuario) return 0;
+
+    const tipoUser = this.obtenerTipoUsuario(alu);
+
+    if ([2, 3, 4].includes(tipoUser)) {
+      try {
+        // Encodeamos la cadena del RUT para evitar rupturas de URL por caracteres especiales
+        const rutSanitizado = encodeURIComponent(alu.rut_usuario);
+
+        const conteo = await firstValueFrom(
+          this.actividadService.getConteoActividadesPorUsuario(rutSanitizado)
+        );
+
+        if (conteo && typeof conteo.total_actividades === 'number') {
+          return conteo.total_actividades;
+        }
+      } catch (err) {
+        console.warn(`No se pudo consultar el conteo para RUT ${alu.rut_usuario}:`, err);
+      }
+    }
+
+    return 0;
+  }
+
+  /**
+   * Carga los usuarios/alumnos y asigna el conteo de actividades
+   * garantizando que coincida con lo buscado en el HTML
+   */
   obtenerAlumnos() {
     this.alumnoService.getAlumnos().subscribe({
-      next: (res: any) => {
-        this.alumnos = this.extraerArreglo(res);
+      next: async (res: any) => {
+        const datosBrutos = this.extraerArreglo(res);
+
+        this.alumnos = await Promise.all(
+          datosBrutos.map(async (alu) => {
+            const conteoActividades = await this.obtenerActividadesReales(alu);
+            const tipoUser = this.obtenerTipoUsuario(alu);
+            const esEncargado = [2, 3, 4].includes(tipoUser);
+
+            return {
+              ...alu,
+              id_tipo_usuario: tipoUser,
+              puntaje_total: this.obtenerPuntajeReal(alu),
+              // Propiedades vinculadas a las variables que lee tu HTML:
+              actividades_a_cargo: esEncargado ? conteoActividades : 0,
+              actividades_cargo_count: esEncargado ? conteoActividades : 0,
+              actividades_inscritas: !esEncargado ? conteoActividades : (alu.actividades_inscritas || 0)
+            };
+          })
+        );
+
         this.filtrarAlumnos();
       },
       error: (err) => {
@@ -160,6 +268,12 @@ export class AdminAlumnosPage implements OnInit {
     }
   }
 
+  onConsejeroChange(event: any) {
+    if (!this.alumnoSeleccionado) return;
+    const esConsejero = event.detail.checked;
+    this.alumnoSeleccionado.id_tipo_usuario = esConsejero ? 4 : 1;
+  }
+
   esEstadoSuspendida(idEstado: any): boolean {
     if (!idEstado) return false;
     const est = this.estadosMatricula.find(e => Number(e.id_estado_matricula) === Number(idEstado));
@@ -179,26 +293,53 @@ export class AdminAlumnosPage implements OnInit {
     }
   }
 
+  /**
+   * Filtrado dinámico por búsqueda de texto y pestaña seleccionada
+   */
   filtrarAlumnos() {
     if (!Array.isArray(this.alumnos)) {
       this.alumnosFiltrados = [];
       return;
     }
 
+    let resultado = [...this.alumnos];
     const texto = this.textoBuscar.trim().toLowerCase();
 
-    if (texto === '') {
-      this.alumnosFiltrados = [...this.alumnos];
-    } else {
-      this.alumnosFiltrados = this.alumnos.filter(alu => {
-        const nombre = alu.nombre_completo ? alu.nombre_completo.toLowerCase() : '';
-        const rut = alu.rut_usuario ? alu.rut_usuario.toLowerCase() : '';
+    // 1. Filtrar por texto (RUT, Nombre o Carrera)
+    if (texto !== '') {
+      resultado = resultado.filter(alu => {
+        const nombre = alu.nombre_completo ? String(alu.nombre_completo).toLowerCase() : '';
+        const rut = alu.rut_usuario ? String(alu.rut_usuario).toLowerCase() : '';
         const carrera = typeof alu.carrera === 'string' 
           ? alu.carrera.toLowerCase() 
-          : (alu.carrera?.descripcion?.toLowerCase() || alu.carrera?.nombre_carrera || '');
+          : (alu.carrera?.descripcion?.toLowerCase() || alu.carrera?.nombre_carrera?.toLowerCase() || '');
+        
         return nombre.includes(texto) || rut.includes(texto) || carrera.includes(texto);
       });
     }
+
+    // 2. Filtrar por segmento activo
+    if (this.filtroApartado === 'alumnos') {
+      resultado = resultado.filter(alu => this.obtenerTipoUsuario(alu) !== 4);
+    } else if (this.filtroApartado === 'consejeros') {
+      resultado = resultado.filter(alu => this.obtenerTipoUsuario(alu) === 4);
+    }
+
+    // 3. Ordenar resultados: Consejeros primero (4) y luego Alumnos (1)
+    resultado.sort((a, b) => {
+      const tipoA = this.obtenerTipoUsuario(a);
+      const tipoB = this.obtenerTipoUsuario(b);
+      
+      if (tipoA !== tipoB) {
+        return tipoB === 4 ? 1 : -1;
+      }
+      
+      const nombreA = a.nombre_completo || '';
+      const nombreB = b.nombre_completo || '';
+      return nombreA.localeCompare(nombreB);
+    });
+
+    this.alumnosFiltrados = resultado;
   }
 
   onFileSelected(event: any) {
@@ -255,47 +396,46 @@ export class AdminAlumnosPage implements OnInit {
     });
   }
 
-async eliminarAlumno(param: any) {
-  const rut = typeof param === 'string' ? param : param?.rut_usuario;
+  async eliminarAlumno(param: any) {
+    const rut = typeof param === 'string' ? param : param?.rut_usuario;
 
-  if (!rut) {
-    this.mostrarToast('No se encontró un RUT válido para eliminar', 'danger');
-    return;
+    if (!rut) {
+      this.mostrarToast('No se encontró un RUT válido para eliminar', 'danger');
+      return;
+    }
+
+    const alert = await this.alertController.create({
+      header: 'Confirmar eliminación',
+      message: `¿Está seguro de eliminar al alumno con RUT ${rut}?`,
+      buttons: [
+        { text: 'Cancelar', role: 'cancel' },
+        {
+          text: 'Eliminar',
+          role: 'destructive',
+          handler: () => {
+            this.alumnoService.deleteAlumno(rut).subscribe({
+              next: () => {
+                if (this.alumnoSeleccionado?.rut_usuario === rut) {
+                  this.alumnoSeleccionado = null;
+                }
+                this.resetForm();
+                this.obtenerAlumnos();
+                this.mostrarToast('Alumno y sus registros fueron eliminados correctamente', 'success');
+              },
+              error: (err) => {
+                console.error('Error DELETE:', err);
+                const msg = err?.error?.error || err?.error?.message || 'Error al eliminar alumno';
+                this.mostrarToast(msg, 'danger');
+              }
+            });
+          }
+        }
+      ]
+    });
+    await alert.present();
   }
 
-  const alert = await this.alertController.create({
-    header: 'Confirmar eliminación',
-    message: `¿Está seguro de eliminar al alumno con RUT ${rut}?`,
-    buttons: [
-      { text: 'Cancelar', role: 'cancel' },
-      {
-        text: 'Eliminar',
-        role: 'destructive',
-        handler: () => {
-          this.alumnoService.deleteAlumno(rut).subscribe({
-            next: () => {
-              // Si el alumno eliminado estaba seleccionado en pantalla o modal, resetear el estado completo
-              if (this.alumnoSeleccionado?.rut_usuario === rut) {
-                this.alumnoSeleccionado = null;
-              }
-              this.resetForm();
-              this.obtenerAlumnos();
-              this.mostrarToast('Alumno y sus registros fueron eliminados correctamente', 'success');
-            },
-            error: (err) => {
-              console.error('Error DELETE:', err);
-              const msg = err?.error?.error || err?.error?.message || 'Error al eliminar alumno';
-              this.mostrarToast(msg, 'danger');
-            }
-          });
-        }
-      }
-    ]
-  });
-  await alert.present();
-}
-
-  prepararEdicion(alumno: any) {
+  async prepararEdicion(alumno: any) {
     if (!alumno) return;
 
     this.limpiarImagenes();
@@ -308,12 +448,13 @@ async eliminarAlumno(param: any) {
       ? alumno.historial_academico[0] 
       : alumno.historial_academico;
 
-    const puntajeObj = Array.isArray(alumno.puntaje_total) 
-      ? alumno.puntaje_total[0] 
-      : alumno.puntaje_total;
+    const conteoActividades = await this.obtenerActividadesReales(alumno);
+    const tipoUser = this.obtenerTipoUsuario(alumno);
+    const esEncargado = [2, 3, 4].includes(tipoUser);
 
     this.alumnoSeleccionado = {
       ...alumno,
+      id_tipo_usuario: tipoUser,
       id_carrera: alumno.id_carrera || (typeof alumno.carrera === 'object' ? alumno.carrera?.id_carrera : null),
       id_escuela: alumno.id_escuela || historial?.id_escuela || null,
       id_requisito: alumno.id_requisito || validacion?.id_requisito || null,
@@ -326,8 +467,10 @@ async eliminarAlumno(param: any) {
       id_jornada_carrera: alumno.id_jornada_carrera || null,
       id_tipo_carrera: alumno.id_tipo_carrera || null,
       id_periodo_academico: alumno.id_periodo_academico || 1,
-      puntaje_total: typeof alumno.puntaje_total === 'number' ? alumno.puntaje_total : (puntajeObj?.puntaje || 0),
-      actividades_inscritas: alumno.actividades_inscritas !== undefined ? alumno.actividades_inscritas : 0,
+      puntaje_total: this.obtenerPuntajeReal(alumno),
+      actividades_a_cargo: esEncargado ? conteoActividades : 0,
+      actividades_cargo_count: esEncargado ? conteoActividades : 0,
+      actividades_inscritas: !esEncargado ? conteoActividades : (alumno.actividades_inscritas || 0),
       historial_academico_resumen: ''
     };
 
@@ -350,6 +493,11 @@ async eliminarAlumno(param: any) {
     const rut = this.alumnoSeleccionado.rut_usuario;
 
     const cambios: string[] = [];
+
+    if (this.estadoPrevio && Number(this.alumnoSeleccionado.id_tipo_usuario) !== Number(this.estadoPrevio.id_tipo_usuario)) {
+      const nuevoRol = Number(this.alumnoSeleccionado.id_tipo_usuario) === 4 ? 'Consejero de Carrera' : 'Alumno Regular';
+      cambios.push(`Rol actualizado a: ${nuevoRol}`);
+    }
 
     if (this.estadoPrevio && Number(this.alumnoSeleccionado.id_estado_matricula) !== Number(this.estadoPrevio.id_estado_matricula)) {
       const estObj = this.estadosMatricula.find(e => Number(e.id_estado_matricula) === Number(this.alumnoSeleccionado.id_estado_matricula));
@@ -383,11 +531,11 @@ async eliminarAlumno(param: any) {
 
     if (cambios.length > 0) {
       const resumenHistorialFinal = cambios.join(' | ');
-    const payloadHistorial: HistorialPayload = {
-      rut_usuario: rut,
-      descripcion: resumenHistorialFinal,
-      id_escuela: this.alumnoSeleccionado.id_escuela ? Number(this.alumnoSeleccionado.id_escuela) : undefined
-    };
+      const payloadHistorial: HistorialPayload = {
+        rut_usuario: rut,
+        descripcion: resumenHistorialFinal,
+        id_escuela: this.alumnoSeleccionado.id_escuela ? Number(this.alumnoSeleccionado.id_escuela) : undefined
+      };
 
       try {
         await firstValueFrom(this.alumnoService.addHistorial(payloadHistorial));
@@ -401,12 +549,13 @@ async eliminarAlumno(param: any) {
         carrera, sede, comuna, estado_matricula, validacion_usuario,
         historial_academico, participacion_activa, puntaje_total,
         jornada, tipo_carrera, periodo_academico, id_jornada_carrera, id_tipo_carrera,
-        descripcion, historial_academico_resumen,
+        descripcion, historial_academico_resumen, actividades_a_cargo, actividades_cargo_count,
         ...datosLimpios
       } = this.alumnoSeleccionado;
 
       const datosTexto = {
         ...datosLimpios,
+        id_tipo_usuario: Number(this.alumnoSeleccionado.id_tipo_usuario || 1),
         telefono: this.alumnoSeleccionado.telefono ? Number(this.alumnoSeleccionado.telefono) : null,
         id_sede: Number(this.alumnoSeleccionado.id_sede),
         id_comuna: Number(this.alumnoSeleccionado.id_comuna),
@@ -500,4 +649,5 @@ async eliminarAlumno(param: any) {
     });
     await toast.present();
   }
+  
 }

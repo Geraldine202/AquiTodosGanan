@@ -11,7 +11,7 @@ import { ActividadService, ActividadPayload } from '../../services/actividad';
 export class AdminActividadesPage implements OnInit {
   @ViewChild('modalDocentes') modalDocentes!: IonModal;
 
-  // Imagen vectorial por defecto (SVG en Base64/DataURL) para evitar depender de archivos locales
+  // Imagen vectorial por defecto para evitar enlaces rotos
   readonly imgDefault: string = '../../../assets/image_38683be5.png';
 
   modoFormulario: 'agregar' | 'editar' = 'agregar';
@@ -19,6 +19,10 @@ export class AdminActividadesPage implements OnInit {
   busquedaDocente: string = '';
   idActividadSeleccionada: number | null = null;
   cargandoImagen: boolean = false;
+
+  // Variables para la gestión de rol del usuario logueado
+  usuarioLogueado: any = null;
+  esConsejero: boolean = false;
 
   // Listas de datos desde FastAPI / Supabase
   listaActividades: any[] = [];
@@ -57,8 +61,33 @@ export class AdminActividadesPage implements OnInit {
   ) {}
 
   ngOnInit() {
+    this.cargarUsuarioLogueado();
     this.cargarCatalogos();
     this.cargarActividades();
+  }
+
+  /**
+   * Carga los datos del usuario logueado desde localStorage 
+   * y verifica si corresponde al tipo de usuario 4 o 3 (Consejero).
+   */
+  cargarUsuarioLogueado() {
+    const userStorage = localStorage.getItem('usuario') || localStorage.getItem('user');
+    if (userStorage) {
+      try {
+        this.usuarioLogueado = JSON.parse(userStorage);
+        
+        const tipoUser = Number(
+          this.usuarioLogueado?.id_tipo_usuario ?? 
+          this.usuarioLogueado?.tipo_usuario?.id_tipo_usuario ?? 
+          this.usuarioLogueado?.id_rol ?? 
+          1
+        );
+
+        this.esConsejero = (tipoUser === 4 || tipoUser === 3);
+      } catch (e) {
+        console.error('Error al parsear el usuario almacenado en sesión:', e);
+      }
+    }
   }
 
   // Maneja imágenes con enlaces rotos o inexistentes en las tarjetas/modales
@@ -96,16 +125,47 @@ export class AdminActividadesPage implements OnInit {
       error: (err) => console.error('Error al cargar estados:', err)
     });
 
-    // 4. Cargar Docentes
+    // 4. Cargar Docentes y Consejeros
+    this.cargarDocentesYConsejeros();
+  }
+
+  /**
+   * Obtiene tanto la lista de docentes como la de consejeros de carrera
+   * y los combina para mostrarlos en el modal de selección de responsables.
+   */
+  cargarDocentesYConsejeros() {
     this.actividadService.getDocentes().subscribe({
-      next: (data: any) => {
-        const docentesRaw = Array.isArray(data) ? data : (data?.data || []);
-        this.listaDocentes = docentesRaw.map((doc: any) => ({
+      next: (dataDocentes: any) => {
+        const docentesRaw = Array.isArray(dataDocentes) ? dataDocentes : (dataDocentes?.data || []);
+        const docentesProcesados = docentesRaw.map((doc: any) => ({
           ...doc,
           rut_usuario: doc.rut_usuario || doc.rut || doc.rut_docente || 'S/R',
           nombre_completo: doc.nombre_completo || `${doc.p_nombre || doc.nombre || ''} ${doc.p_apellido || doc.apellido || ''}`.trim()
         }));
-        this.docentesFiltrados = [...this.listaDocentes];
+
+        // Intentar obtener también los consejeros si están separados
+        this.actividadService.getConsejeros().subscribe({
+          next: (dataConsejeros: any) => {
+            const consejerosRaw = Array.isArray(dataConsejeros) ? dataConsejeros : (dataConsejeros?.data || []);
+            const consejerosProcesados = consejerosRaw.map((c: any) => ({
+              ...c,
+              rut_usuario: c.rut_usuario || c.rut || 'S/R',
+              nombre_completo: c.nombre_completo || `${c.p_nombre || c.nombre || ''} ${c.p_apellido || c.apellido || ''}`.trim()
+            }));
+
+            // Fusionar y eliminar duplicados por rut_usuario
+            const mapaUsuarios = new Map();
+            [...docentesProcesados, ...consejerosProcesados].forEach(u => mapaUsuarios.set(u.rut_usuario, u));
+            
+            this.listaDocentes = Array.from(mapaUsuarios.values());
+            this.docentesFiltrados = [...this.listaDocentes];
+          },
+          error: () => {
+            // Si el endpoint consejeros da error, mantiene solo los docentes recuperados
+            this.listaDocentes = docentesProcesados;
+            this.docentesFiltrados = [...this.listaDocentes];
+          }
+        });
       },
       error: (err) => console.error('Error al cargar docentes:', err)
     });
@@ -217,6 +277,15 @@ export class AdminActividadesPage implements OnInit {
       requisito: '',
       img_actv: ''
     };
+
+    // Si el usuario logueado es Consejero, se autosetea como el responsable por defecto
+    if (this.esConsejero && this.usuarioLogueado) {
+      this.formulario.rut_usuario = this.usuarioLogueado.rut_usuario || '';
+      this.formulario.responsable_actividad = 
+        this.usuarioLogueado.nombre_completo || 
+        `${this.usuarioLogueado.p_nombre || ''} ${this.usuarioLogueado.p_apellido || ''}`.trim() ||
+        'Consejero de Carrera';
+    }
   }
 
   private formatearFechaISO(fechaStr: string): string {

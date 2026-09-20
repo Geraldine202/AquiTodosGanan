@@ -15,73 +15,117 @@
       </ion-item>
     </div>
 
+    <!-- Segmento de Filtro / Apartados -->
+    <ion-segment [(ngModel)]="filtroApartado" (ionChange)="filtrarAlumnos()" class="ion-margin-bottom">
+      <ion-segment-button value="todos">
+        <ion-label>Todos</ion-label>
+      </ion-segment-button>
+      <ion-segment-button value="alumnos">
+        <ion-label>Alumnos</ion-label>
+      </ion-segment-button>
+      <ion-segment-button value="consejeros">
+        <ion-label>Consejeros</ion-label>
+      </ion-segment-button>
+    </ion-segment>
+
     <!-- Botón Agregar Alumno -->
     <ion-button expand="block" class="btn-agregar" id="open-modal-agregar" (click)="resetForm()">
       <ion-icon name="person-add-outline" slot="start"></ion-icon>
-      Agregar Nuevo Alumno
+      Agregar Nuevo Usuario
     </ion-button>
 
-    <!-- Lista de Alumnos -->
-    <ion-card class="card-item" *ngFor="let alu of alumnosFiltrados">
-      <ion-card-content>
-        <div class="card-cuerpo">
-          
-          <div class="avatar-container">
-            <img [src]="alu.imagen ? alu.imagen : 'assets/usuario.webp'" alt="Avatar" class="alumno-avatar">
-          </div>
+    <!-- ===== SECCIÓN: ALUMNO Y/O CONSEJEROS ===== -->
+    <ng-container *ngFor="let alu of alumnosFiltrados; let i = index">
+      
+      <!-- Encabezado de Sección: Consejeros de Carrera -->
+      <ion-list-header class="seccion-header" *ngIf="alu.id_tipo_usuario === 4 && (i === 0 || alumnosFiltrados[i-1]?.id_tipo_usuario !== 4)">
+        <ion-label color="tertiary">
+          <ion-icon name="briefcase-outline"></ion-icon> Consejeros de Carrera
+        </ion-label>
+      </ion-list-header>
 
-          <div class="info-container">
-            <div class="fila-superior">
-              <div class="datos-principales">
-                <h2>{{ alu.nombre_completo }}</h2>
-                <p class="rut-text"><ion-icon name="card-outline"></ion-icon> {{ alu.rut_usuario }}</p>
-              </div>
-              <span class="estado-badge" [ngClass]="alu.estado_matricula?.nombre_estado?.toLowerCase() || (alu.id_estado_matricula === 1 ? 'activo' : 'suspendido')">
-                <span class="punto-indicador"></span>
-                {{ alu.estado_matricula?.nombre_estado || alu.estado_matricula?.descripcion || 'Sin estado' }}
-              </span>
-            </div>
+      <!-- Encabezado de Sección: Alumnos -->
+      <ion-list-header class="seccion-header" *ngIf="alu.id_tipo_usuario !== 4 && (i === 0 || alumnosFiltrados[i-1]?.id_tipo_usuario === 4)">
+        <ion-label color="primary">
+          <ion-icon name="school-outline"></ion-icon> Alumnos
+        </ion-label>
+      </ion-list-header>
 
-            <!-- Datos Adicionales en Tarjeta -->
-            <div class="detalles-extra ion-margin-top">
-              <p>
-                <ion-icon name="school-outline"></ion-icon> Carrera: 
-                <strong>{{ alu.carrera?.nombre_carrera || alu.carrera?.descripcion_carrera }}</strong>
-              </p>
-              <p>
-                <ion-icon name="time-outline"></ion-icon> Jornada: 
-                {{ alu.carrera?.jornada_carrera?.descripcion || alu.carrera?.jornada?.nombre_jornada || 'N/A' }} 
-                ({{ alu.carrera?.tipo_carrera?.descripcion || alu.carrera?.tipo_carrera?.nombre_tipo || 'N/A' }})
-              </p>
-              <p>
-                <ion-icon name="trophy-outline"></ion-icon> Puntaje: <strong>{{ alu.puntaje_total || 0 }} pts</strong> | 
-                Actividades: <strong>{{ alu.actividades_inscritas || 0 }}</strong>
-              </p>
-            </div>
+      <!-- Lista de Usuarios / Alumnos / Consejeros -->
+      <ion-card class="card-item">
+        <ion-card-content>
+          <div class="card-cuerpo">
             
-            <hr class="divisor-tarjeta">
-
-            <div class="acciones">
-              <ion-button fill="clear" size="small" class="btn-editar" (click)="prepararEdicion(alu)">
-                <ion-icon name="create-outline" slot="start"></ion-icon>
-                Editar
-              </ion-button>
-
-              <ion-button fill="clear" size="small" color="danger" class="btn-eliminar" (click)="eliminarAlumno(alu.rut_usuario)">
-                <ion-icon name="trash-outline" slot="start"></ion-icon>
-                Eliminar
-              </ion-button>
+            <div class="avatar-container">
+              <img [src]="alu.imagen ? alu.imagen : 'assets/usuario.webp'" alt="Avatar" class="alumno-avatar">
             </div>
-          </div>
 
-        </div>
-      </ion-card-content>
-    </ion-card>
+            <div class="info-container">
+              <div class="fila-superior">
+                <div class="datos-principales">
+                  <h2>
+                    {{ alu.nombre_completo }}
+                    <!-- Badge indicador si es Consejero de Carrera -->
+                    <ion-badge color="tertiary" *ngIf="alu.id_tipo_usuario === 4" style="margin-left: 6px; font-size: 0.7rem;">
+                      Consejero
+                    </ion-badge>
+                  </h2>
+                  <p class="rut-text"><ion-icon name="card-outline"></ion-icon> {{ alu.rut_usuario }}</p>
+                </div>
+                <span class="estado-badge" [ngClass]="alu.estado_matricula?.nombre_estado?.toLowerCase() || (alu.id_estado_matricula === 1 ? 'activo' : 'suspendido')">
+                  <span class="punto-indicador"></span>
+                  {{ alu.estado_matricula?.nombre_estado || alu.estado_matricula?.descripcion || 'Sin estado' }}
+                </span>
+              </div>
+
+              <!-- Datos Adicionales en Tarjeta -->
+              <div class="detalles-extra ion-margin-top">
+                <p>
+                  <ion-icon name="school-outline"></ion-icon> Carrera: 
+                  <strong>{{ alu.carrera?.nombre_carrera || alu.carrera?.descripcion_carrera }}</strong>
+                </p>
+                <p>
+                  <ion-icon name="time-outline"></ion-icon> Jornada: 
+                  {{ alu.carrera?.jornada_carrera?.descripcion || alu.carrera?.jornada?.nombre_jornada || 'N/A' }} 
+                  ({{ alu.carrera?.tipo_carrera?.descripcion || alu.carrera?.tipo_carrera?.nombre_tipo || 'N/A' }})
+                </p>
+                <p>
+                  <ion-icon name="trophy-outline"></ion-icon> Puntaje: <strong>{{ alu.puntaje_total || 0 }} pts</strong> | 
+                  Actividades inscritas: <strong>{{ alu.actividades_inscritas || 0 }}</strong>
+                </p>
+                
+                <!-- Contador de Actividades a Cargo (Solo visible para Consejeros de Carrera) -->
+                <p *ngIf="alu.id_tipo_usuario === 4" color="tertiary">
+                  <ion-icon name="clipboard-outline" color="tertiary"></ion-icon> 
+                  Actividades a Cargo: <strong style="color: var(--ion-color-tertiary);">{{ alu.actividades_a_cargo || alu.actividades_cargo_count || 0 }}</strong>
+                </p>
+              </div>
+              
+              <hr class="divisor-tarjeta">
+
+              <div class="acciones">
+                <ion-button fill="clear" size="small" class="btn-editar" (click)="prepararEdicion(alu)">
+                  <ion-icon name="create-outline" slot="start"></ion-icon>
+                  Editar
+                </ion-button>
+
+                <ion-button fill="clear" size="small" color="danger" class="btn-eliminar" (click)="eliminarAlumno(alu.rut_usuario)">
+                  <ion-icon name="trash-outline" slot="start"></ion-icon>
+                  Eliminar
+                </ion-button>
+              </div>
+            </div>
+
+          </div>
+        </ion-card-content>
+      </ion-card>
+
+    </ng-container>
 
     <!-- Estado Vacío -->
     <div class="empty-state ion-text-center ion-padding" *ngIf="alumnosFiltrados.length === 0">
       <ion-icon name="people-outline" style="font-size: 48px; color: var(--ion-color-medium);"></ion-icon>
-      <p style="color: var(--ion-color-medium);">No se encontraron alumnos registrados</p>
+      <p style="color: var(--ion-color-medium);">No se encontraron registros para mostrar</p>
     </div>
 
   </div>
@@ -212,6 +256,19 @@
 
           <ion-item class="input-modal" lines="none">
             <ion-input label="Correo Electrónico" labelPlacement="stacked" [(ngModel)]="alumnoSeleccionado.correo" type="email"></ion-input>
+          </ion-item>
+
+          <!-- SWITCH CONSEJERO DE CARRERA (OPCIÓN B) -->
+          <ion-item class="input-modal" lines="none" style="--background: rgba(var(--ion-color-primary-rgb), 0.05); border-radius: 10px; margin: 10px 0;">
+            <ion-label>
+              <h2 style="font-weight: 600; color: var(--ion-color-dark);">¿Es Consejero de Carrera?</h2>
+              <p style="font-size: 0.8rem; color: var(--ion-color-medium);">Permite al estudiante administrar actividades</p>
+            </ion-label>
+            <ion-toggle 
+              slot="end" 
+              [checked]="alumnoSeleccionado.id_tipo_usuario === 4"
+              (ionChange)="onConsejeroChange($event)">
+            </ion-toggle>
           </ion-item>
 
           <!-- Carrera Dinámica -->
