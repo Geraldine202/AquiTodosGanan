@@ -1,6 +1,30 @@
 import { Component, OnInit, ViewChild } from '@angular/core';
 import { IonModal, ToastController, AlertController } from '@ionic/angular';
-import { ActividadService, ActividadPayload } from '../../services/actividad';
+import { 
+  ActividadService, 
+  ActividadPayload, 
+  ResumenListaInscritos, 
+  EstudianteAsistencia 
+} from '../../services/actividad';
+import { AlumnoService } from 'src/app/services/alumno';
+
+export interface FormularioActividad {
+  nombre_actividad: string;
+  descripcion: string;
+  responsable_actividad: string;
+  rut_usuario: string;
+  id_tipo_actividad: number | null;
+  id_estado_actividad: number | null;
+  id_sede: number | null;
+  fecha: string;        // 'YYYY-MM-DD'
+  hora_inicio: string;  // 'HH:mm'
+  hora_termino: string; // 'HH:mm'
+  puntos: number | null;
+  cupos: number | null;
+  lugar: string;
+  requisito: string;
+  img_actv: string;
+}
 
 @Component({
   selector: 'app-admin-actividades',
@@ -10,21 +34,31 @@ import { ActividadService, ActividadPayload } from '../../services/actividad';
 })
 export class AdminActividadesPage implements OnInit {
   @ViewChild('modalDocentes') modalDocentes!: IonModal;
+  @ViewChild('modalDetalles') modalDetalles!: IonModal;
 
-  // Imagen vectorial por defecto para evitar enlaces rotos
   readonly imgDefault: string = '../../../assets/image_38683be5.png';
 
   modoFormulario: 'agregar' | 'editar' = 'agregar';
   busquedaActividad: string = '';
   busquedaDocente: string = '';
   idActividadSeleccionada: number | null = null;
+  
   cargandoImagen: boolean = false;
+  cargandoAsistencia: boolean = false;
+  cargandoGuardado: boolean = false;
 
-  // Variables para la gestión de rol del usuario logueado
+  pestanaSeleccionada: 'vigentes' | 'finalizadas' = 'vigentes';
+
+  // Variables para gestión de asistencia
+  actividadSeleccionadaModal: any = null;
+  listaEstudiantesInscritos: any[] = [];
+  resumenInscritos: ResumenListaInscritos | null = null;
+  cargandoInscritos: boolean = false;
+
   usuarioLogueado: any = null;
   esConsejero: boolean = false;
+  esAdmin: boolean = false;
 
-  // Listas de datos desde FastAPI / Supabase
   listaActividades: any[] = [];
   actividadesFiltradas: any[] = [];
   listaDocentes: any[] = [];
@@ -33,49 +67,47 @@ export class AdminActividadesPage implements OnInit {
   listaEstados: any[] = [];
   listaSedes: any[] = [];
 
-  // Formulario de Creación
-  formulario = {
+  formulario: FormularioActividad = {
     nombre_actividad: '',
     descripcion: '',
     responsable_actividad: '',
     rut_usuario: '',
-    id_tipo_actividad: null as number | null,
-    id_estado_actividad: 1 as number | null, // Por defecto 1 (Programada)
-    id_sede: null as number | null,
-    fecha_inicio: '',
-    fecha_termino: '',
-    puntos: null as number | null,
-    cupos: null as number | null,
+    id_tipo_actividad: null,
+    id_estado_actividad: 1,
+    id_sede: null,
+    fecha: '',
+    hora_inicio: '',
+    hora_termino: '',
+    puntos: null,
+    cupos: null,
     lugar: '',
     requisito: '',
     img_actv: ''
   };
 
-  // Formulario de Edición
-  formularioEdicion = { ...this.formulario };
+  formularioEdicion: FormularioActividad = { ...this.formulario };
 
   constructor(
     private actividadService: ActividadService,
+    private alumnoService: AlumnoService,
     private toastController: ToastController,
     private alertController: AlertController
   ) {}
 
   ngOnInit() {
-    this.cargarUsuarioLogueado();
+    this.escucharUsuario();
+  }
+
+  ionViewWillEnter() {
     this.cargarCatalogos();
     this.cargarActividades();
   }
 
-  /**
-   * Carga los datos del usuario logueado desde localStorage 
-   * y verifica si corresponde al tipo de usuario 4 o 3 (Consejero).
-   */
-  cargarUsuarioLogueado() {
-    const userStorage = localStorage.getItem('usuario') || localStorage.getItem('user');
-    if (userStorage) {
-      try {
-        this.usuarioLogueado = JSON.parse(userStorage);
-        
+  escucharUsuario() {
+    this.alumnoService.usuario$.subscribe(usuario => {
+      this.usuarioLogueado = usuario;
+
+      if (this.usuarioLogueado) {
         const tipoUser = Number(
           this.usuarioLogueado?.id_tipo_usuario ?? 
           this.usuarioLogueado?.tipo_usuario?.id_tipo_usuario ?? 
@@ -83,56 +115,60 @@ export class AdminActividadesPage implements OnInit {
           1
         );
 
-        this.esConsejero = (tipoUser === 4 || tipoUser === 3);
-      } catch (e) {
-        console.error('Error al parsear el usuario almacenado en sesión:', e);
+        this.esAdmin = (tipoUser === 2);
+        this.esConsejero = (tipoUser === 3 || tipoUser === 4);
+
+        if (this.listaActividades.length > 0) {
+          this.filtrarActividades();
+        }
       }
-    }
+    });
   }
 
-  // Maneja imágenes con enlaces rotos o inexistentes en las tarjetas/modales
   onImgError(event: Event) {
     (event.target as HTMLImageElement).src = this.imgDefault;
   }
 
-  // Carga inicial de datos desde los endpoints de catálogo
   cargarCatalogos() {
     // 1. Cargar Sedes
     this.actividadService.getSedes().subscribe({
       next: (data: any) => {
         const sedesRaw = Array.isArray(data) ? data : (data?.data || []);
-        
         this.listaSedes = sedesRaw.map((s: any) => ({
-          id_sede: Number(s.id_sede ?? s.id ?? s.id_sede_act),
-          descripcion: s.descripcion || s.nombre_sede || s.nombre || s.lugar || 'Sede sin nombre'
+          id_sede: Number(s.id_sede ?? s.id ?? s.id_sede_act ?? 1),
+          descripcion: s.descripcion || s.nombre_sede || s.nombre || 'Sede sin nombre'
         }));
       },
-      error: (err) => {
-        console.error('Error al cargar sedes:', err);
-        this.mostrarToast('Error al cargar sedes desde la BD', 'danger');
-      }
+      error: (err) => console.error('Error al cargar sedes:', err)
     });
 
-    // 2. Cargar Tipos
+    // 2. Cargar Tipos de Actividad
     this.actividadService.getTiposActividad().subscribe({
-      next: (data: any) => this.listaTipos = Array.isArray(data) ? data : (data?.data || []),
-      error: (err) => console.error('Error al cargar tipos:', err)
+      next: (data: any) => {
+        const tiposRaw = Array.isArray(data) ? data : (data?.data || []);
+        this.listaTipos = tiposRaw.map((t: any) => ({
+          id_tipo_actividad: Number(t.id_tipo_actividad ?? t.id ?? t.id_tipo ?? 1),
+          descripcion: t.descripcion || t.nombre_tipo || t.nombre || 'Sin tipo'
+        }));
+      },
+      error: (err: any) => console.error('Error al cargar tipos:', err)
     });
 
     // 3. Cargar Estados
     this.actividadService.getEstadosActividad().subscribe({
-      next: (data: any) => this.listaEstados = Array.isArray(data) ? data : (data?.data || []),
-      error: (err) => console.error('Error al cargar estados:', err)
+      next: (data: any) => {
+        const estadosRaw = Array.isArray(data) ? data : (data?.data || []);
+        this.listaEstados = estadosRaw.map((e: any) => ({
+          id_estado_actividad: Number(e.id_estado_actividad ?? e.id ?? 1),
+          descripcion: e.descripcion || e.nombre_estado || 'Sin estado'
+        }));
+      },
+      error: (err: any) => console.error('Error al cargar estados:', err)
     });
 
-    // 4. Cargar Docentes y Consejeros
     this.cargarDocentesYConsejeros();
   }
 
-  /**
-   * Obtiene tanto la lista de docentes como la de consejeros de carrera
-   * y los combina para mostrarlos en el modal de selección de responsables.
-   */
   cargarDocentesYConsejeros() {
     this.actividadService.getDocentes().subscribe({
       next: (dataDocentes: any) => {
@@ -143,7 +179,6 @@ export class AdminActividadesPage implements OnInit {
           nombre_completo: doc.nombre_completo || `${doc.p_nombre || doc.nombre || ''} ${doc.p_apellido || doc.apellido || ''}`.trim()
         }));
 
-        // Intentar obtener también los consejeros si están separados
         this.actividadService.getConsejeros().subscribe({
           next: (dataConsejeros: any) => {
             const consejerosRaw = Array.isArray(dataConsejeros) ? dataConsejeros : (dataConsejeros?.data || []);
@@ -153,31 +188,147 @@ export class AdminActividadesPage implements OnInit {
               nombre_completo: c.nombre_completo || `${c.p_nombre || c.nombre || ''} ${c.p_apellido || c.apellido || ''}`.trim()
             }));
 
-            // Fusionar y eliminar duplicados por rut_usuario
             const mapaUsuarios = new Map();
             [...docentesProcesados, ...consejerosProcesados].forEach(u => mapaUsuarios.set(u.rut_usuario, u));
-            
             this.listaDocentes = Array.from(mapaUsuarios.values());
             this.docentesFiltrados = [...this.listaDocentes];
           },
           error: () => {
-            // Si el endpoint consejeros da error, mantiene solo los docentes recuperados
             this.listaDocentes = docentesProcesados;
             this.docentesFiltrados = [...this.listaDocentes];
           }
         });
       },
-      error: (err) => console.error('Error al cargar docentes:', err)
+      error: (err: any) => console.error('Error al cargar docentes:', err)
     });
   }
 
   cargarActividades() {
     this.actividadService.getActividades().subscribe({
-      next: (data) => {
-        this.listaActividades = data;
-        this.actividadesFiltradas = [...data];
+      next: (data: any) => {
+        this.listaActividades = Array.isArray(data) ? data : (data?.data || []);
+        this.filtrarActividades();
       },
       error: () => this.mostrarToast('Error al cargar la lista de actividades', 'danger')
+    });
+  }
+
+  esProgramada(act: any): boolean {
+    const estadoId = Number(act.id_estado_actividad ?? act.estado_actividad?.id_estado_actividad ?? 1);
+    const desc = (act.estado_actividad?.descripcion || '').toLowerCase();
+    return estadoId === 1 || desc === 'programada';
+  }
+
+  esEnCurso(act: any): boolean {
+    if (!act) return false;
+    const estadoId = Number(act.id_estado_actividad ?? act.estado_actividad?.id_estado_actividad ?? 1);
+    const desc = (act.estado_actividad?.descripcion || '').toLowerCase();
+
+    if (estadoId === 2 || desc === 'en curso') return true;
+
+    if (act.fecha && act.hora_inicio && act.hora_termino) {
+      const ahora = new Date();
+      const fechaBase = act.fecha.split('T')[0];
+      const inicio = new Date(`${fechaBase}T${act.hora_inicio}`);
+      const termino = new Date(`${fechaBase}T${act.hora_termino}`);
+      return ahora >= inicio && ahora <= termino;
+    }
+    return false;
+  }
+
+  private normalizarRut(rut: string | null | undefined): string {
+    if (!rut) return '';
+    return String(rut).replace(/[^0-9kK]/g, '').toLowerCase().trim();
+  }
+
+  filtrarActividades() {
+    const q = this.busquedaActividad ? this.busquedaActividad.toLowerCase().trim() : '';
+    const rutUsuarioStorage = localStorage.getItem('rut_usuario') || localStorage.getItem('rut') || '';
+    const rutSesionRaw = this.usuarioLogueado?.rut_usuario || this.usuarioLogueado?.rut || rutUsuarioStorage || '';
+    const rutSesion = this.normalizarRut(rutSesionRaw);
+
+    this.actividadesFiltradas = this.listaActividades.filter(act => {
+      if (!this.esAdmin && rutSesion !== '') {
+        const rutResponsableRaw = act.rut_usuario || act.usuario?.rut_usuario || act.rut_docente || '';
+        const rutResponsable = this.normalizarRut(rutResponsableRaw);
+        if (rutResponsable && rutResponsable !== rutSesion) return false;
+      }
+
+      const estadoId = Number(act.id_estado_actividad ?? act.estado_actividad?.id_estado_actividad ?? 1);
+      const descEstado = (act.estado_actividad?.descripcion || '').toLowerCase();
+      const esFinalizada = estadoId === 3 || estadoId === 4 || descEstado === 'finalizada' || descEstado === 'cancelada';
+
+      const coincidePestana = this.pestanaSeleccionada === 'vigentes' ? !esFinalizada : esFinalizada;
+      const coincideBusqueda = !q || 
+        (act.nombre_actividad && act.nombre_actividad.toLowerCase().includes(q)) ||
+        (act.responsable_actividad && act.responsable_actividad.toLowerCase().includes(q));
+
+      return coincidePestana && coincideBusqueda;
+    });
+  }
+
+  verDetallesEstudiantes(act: any, modal: IonModal) {
+    this.actividadSeleccionadaModal = act;
+    this.listaEstudiantesInscritos = [];
+    this.resumenInscritos = null;
+    this.cargandoInscritos = true;
+    modal.present();
+
+    this.actividadService.getEstudiantesInscritos(act.id_actividad).subscribe({
+      next: (res: ResumenListaInscritos) => {
+        this.cargandoInscritos = false;
+        this.resumenInscritos = res;
+        this.listaEstudiantesInscritos = (res.estudiantes || []).map(est => ({
+          ...est,
+          asistio: Boolean(est.asistio)
+        }));
+      },
+      error: (err: any) => {
+        this.cargandoInscritos = false;
+        console.error('Error al obtener lista de inscritos:', err);
+        this.mostrarToast('Error al cargar los estudiantes inscritos', 'danger');
+      }
+    });
+  }
+
+  cambiarEstadoAsistencia(estudiante: any, estuvoPresente: boolean) {
+    estudiante.asistio = estuvoPresente;
+    if (this.resumenInscritos) {
+      this.resumenInscritos.total_asistentes = this.listaEstudiantesInscritos.filter(e => e.asistio).length;
+    }
+  }
+
+  guardarAsistenciaLote() {
+    if (!this.actividadSeleccionadaModal) return;
+
+    if (!this.esEnCurso(this.actividadSeleccionadaModal)) {
+      this.mostrarToast('Solo se puede registrar la asistencia cuando la actividad esté en curso.', 'warning');
+      return;
+    }
+
+    this.cargandoAsistencia = true;
+    
+    // Mapeo adaptado al tipo de datos 'EstudianteAsistencia'
+    const estudiantesPayload: EstudianteAsistencia[] = this.listaEstudiantesInscritos.map(est => ({
+      rut_usuario: est.rut || est.rut_usuario,
+      presente: Boolean(est.asistio)
+    }));
+
+    this.actividadService.registrarAsistenciaMasiva(
+      this.actividadSeleccionadaModal.id_actividad, 
+      estudiantesPayload
+    ).subscribe({
+      next: () => {
+        this.cargandoAsistencia = false;
+        this.mostrarToast('Asistencia guardada correctamente. Los puntos se sumarán al finalizar el horario.', 'success');
+        if (this.modalDetalles) this.modalDetalles.dismiss();
+        this.cargarActividades();
+      },
+      error: (err: any) => {
+        this.cargandoAsistencia = false;
+        console.error('Error guardando asistencia:', err);
+        this.mostrarToast('Error al registrar la asistencia', 'danger');
+      }
     });
   }
 
@@ -189,7 +340,7 @@ export class AdminActividadesPage implements OnInit {
     this.mostrarToast('Subiendo imagen...', 'warning');
 
     this.actividadService.subirImagen(file).subscribe({
-      next: (res) => {
+      next: (res: { url: string; filename: string }) => {
         this.cargandoImagen = false;
         if (modo === 'agregar') {
           this.formulario.img_actv = res.url;
@@ -198,10 +349,10 @@ export class AdminActividadesPage implements OnInit {
         }
         this.mostrarToast('Imagen subida correctamente', 'success');
       },
-      error: (err) => {
+      error: (err: any) => {
         this.cargandoImagen = false;
         console.error('Error al subir imagen:', err);
-        this.mostrarToast('Error al subir la imagen al servidor', 'danger');
+        this.mostrarToast('Error al subir la imagen', 'danger');
       }
     });
   }
@@ -213,18 +364,6 @@ export class AdminActividadesPage implements OnInit {
       this.formularioEdicion.img_actv = '';
     }
     this.mostrarToast('Imagen quitada del formulario', 'warning');
-  }
-
-  filtrarActividades() {
-    const q = this.busquedaActividad.toLowerCase().trim();
-    if (!q) {
-      this.actividadesFiltradas = [...this.listaActividades];
-      return;
-    }
-    this.actividadesFiltradas = this.listaActividades.filter(act =>
-      act.nombre_actividad?.toLowerCase().includes(q) ||
-      (act.responsable_actividad && act.responsable_actividad.toLowerCase().includes(q))
-    );
   }
 
   abrirModalDocentes(modo: 'agregar' | 'editar') {
@@ -261,16 +400,19 @@ export class AdminActividadesPage implements OnInit {
   }
 
   limpiarFormulario() {
+    const rutSesion = this.usuarioLogueado?.rut_usuario || localStorage.getItem('rut_usuario') || '';
+
     this.formulario = {
       nombre_actividad: '',
       descripcion: '',
       responsable_actividad: '',
-      rut_usuario: '',
+      rut_usuario: rutSesion,
       id_tipo_actividad: null,
       id_estado_actividad: 1,
       id_sede: null,
-      fecha_inicio: '',
-      fecha_termino: '',
+      fecha: '',
+      hora_inicio: '',
+      hora_termino: '',
       puntos: null,
       cupos: null,
       lugar: '',
@@ -278,39 +420,30 @@ export class AdminActividadesPage implements OnInit {
       img_actv: ''
     };
 
-    // Si el usuario logueado es Consejero, se autosetea como el responsable por defecto
     if (this.esConsejero && this.usuarioLogueado) {
-      this.formulario.rut_usuario = this.usuarioLogueado.rut_usuario || '';
       this.formulario.responsable_actividad = 
         this.usuarioLogueado.nombre_completo || 
         `${this.usuarioLogueado.p_nombre || ''} ${this.usuarioLogueado.p_apellido || ''}`.trim() ||
-        'Consejero de Carrera';
+        'Responsable';
     }
   }
 
-  private formatearFechaISO(fechaStr: string): string {
-    if (!fechaStr || !fechaStr.trim()) {
-      const d = new Date();
-      const pad = (n: number) => n.toString().padStart(2, '0');
-      return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}:00`;
-    }
-
-    let limpia = fechaStr.split('Z')[0];
-    const partes = limpia.split('T');
-    
-    if (partes.length === 2) {
-      const horaLimpia = partes[1].split('+')[0].split('-')[0];
-      limpia = `${partes[0]}T${horaLimpia}`;
-    }
-
-    if (limpia.length === 16) {
-      limpia += ':00';
-    }
-
-    return limpia.slice(0, 19);
+  private formatearFecha(fechaStr: string): string {
+    if (!fechaStr) return '';
+    return fechaStr.split('T')[0];
   }
 
-  private construirPayload(f: any): ActividadPayload {
+  private formatearHora(horaStr: string): string {
+    if (!horaStr) return '00:00:00';
+    const horaLimpia = horaStr.includes('T') ? horaStr.split('T')[1] : horaStr;
+    const partes = horaLimpia.split(':');
+    if (partes.length >= 2) {
+      return `${partes[0].padStart(2, '0')}:${partes[1].padStart(2, '0')}:00`;
+    }
+    return '00:00:00';
+  }
+
+  private construirPayload(f: FormularioActividad): ActividadPayload {
     return {
       nombre_actividad: f.nombre_actividad,
       descripcion: f.descripcion || 'Sin descripción',
@@ -319,8 +452,9 @@ export class AdminActividadesPage implements OnInit {
       id_tipo_actividad: Number(f.id_tipo_actividad),
       id_estado_actividad: f.id_estado_actividad ? Number(f.id_estado_actividad) : 1,
       id_sede: f.id_sede ? Number(f.id_sede) : 1,
-      fecha_inicio: this.formatearFechaISO(f.fecha_inicio),
-      fecha_termino: this.formatearFechaISO(f.fecha_termino),
+      fecha: this.formatearFecha(f.fecha),
+      hora_inicio: this.formatearHora(f.hora_inicio),
+      hora_termino: this.formatearHora(f.hora_termino),
       puntos: f.puntos ? Number(f.puntos) : 0,
       cupos: f.cupos ? Number(f.cupos) : 0,
       lugar: f.lugar || 'Por definir',
@@ -330,28 +464,38 @@ export class AdminActividadesPage implements OnInit {
   }
 
   guardarActividad(modal: IonModal) {
+    if (this.cargandoGuardado) return;
+
     if (!this.formulario.nombre_actividad || !this.formulario.rut_usuario || !this.formulario.id_tipo_actividad) {
       this.mostrarToast('Por favor complete los campos obligatorios (*)', 'warning');
       return;
     }
 
+    this.cargandoGuardado = true;
     const payload = this.construirPayload(this.formulario);
 
     this.actividadService.crearActividad(payload).subscribe({
       next: () => {
+        this.cargandoGuardado = false;
         this.mostrarToast('Actividad creada exitosamente', 'success');
         this.cargarActividades();
         modal.dismiss();
         this.limpiarFormulario();
       },
-      error: (err) => {
-        console.error('Detalle error FastAPI:', err.error?.detail || err.error);
+      error: (err: any) => {
+        this.cargandoGuardado = false;
+        console.error('Error al crear:', err);
         this.mostrarToast('Error al crear la actividad', 'danger');
       }
     });
   }
 
   prepararEdicion(act: any, modal: IonModal) {
+    if (!this.esProgramada(act)) {
+      this.mostrarToast('Las actividades en curso o finalizadas no se pueden editar.', 'warning');
+      return;
+    }
+
     this.idActividadSeleccionada = act.id_actividad;
 
     const puntoItem = Array.isArray(act.puntaje_act) ? act.puntaje_act[0] : act.puntaje_act;
@@ -365,11 +509,12 @@ export class AdminActividadesPage implements OnInit {
       descripcion: act.descripcion || '',
       responsable_actividad: act.responsable_actividad || act.usuario?.nombre_completo || '',
       rut_usuario: act.rut_usuario || act.usuario?.rut_usuario || '',
-      id_tipo_actividad: act.id_tipo_actividad || null,
-      id_estado_actividad: act.id_estado_actividad || 1,
-      id_sede: act.id_sede || null,
-      fecha_inicio: act.fecha_inicio ? act.fecha_inicio.substring(0, 16) : '',
-      fecha_termino: act.fecha_termino ? act.fecha_termino.substring(0, 16) : '',
+      id_tipo_actividad: act.id_tipo_actividad ? Number(act.id_tipo_actividad) : null,
+      id_estado_actividad: act.id_estado_actividad ? Number(act.id_estado_actividad) : 1,
+      id_sede: act.id_sede ? Number(act.id_sede) : null,
+      fecha: act.fecha ? act.fecha.split('T')[0] : '',
+      hora_inicio: act.hora_inicio ? act.hora_inicio.slice(0, 5) : '',
+      hora_termino: act.hora_termino ? act.hora_termino.slice(0, 5) : '',
       puntos: puntoItem?.cantidad ?? null,
       cupos: cupoItem?.cantidad ?? null,
       lugar: lugarItem?.descripcion || calItem?.lugar || '',
@@ -381,24 +526,28 @@ export class AdminActividadesPage implements OnInit {
   }
 
   actualizarActividad(modal: IonModal) {
-    if (!this.idActividadSeleccionada) return;
+    if (!this.idActividadSeleccionada || this.cargandoGuardado) return;
 
+    this.cargandoGuardado = true;
     const payload = this.construirPayload(this.formularioEdicion);
 
     this.actividadService.actualizarActividad(this.idActividadSeleccionada, payload).subscribe({
       next: () => {
+        this.cargandoGuardado = false;
         this.mostrarToast('Actividad actualizada correctamente', 'success');
         this.cargarActividades();
         modal.dismiss();
       },
-      error: (err) => {
-        console.error('Detalle error FastAPI:', err.error?.detail || err.error);
+      error: (err: any) => {
+        this.cargandoGuardado = false;
+        console.error('Error al actualizar:', err);
         this.mostrarToast('Error al actualizar la actividad', 'danger');
       }
     });
   }
 
-  async confirmarEliminacion(id: number) {
+  async confirmarEliminacion(act: any) {
+    const id = typeof act === 'number' ? act : act.id_actividad;
     const alert = await this.alertController.create({
       header: 'Confirmar Eliminación',
       message: '¿Está seguro de que desea eliminar esta actividad?',
@@ -407,9 +556,7 @@ export class AdminActividadesPage implements OnInit {
         {
           text: 'Eliminar',
           role: 'destructive',
-          handler: () => {
-            this.eliminarActividad(id);
-          }
+          handler: () => this.eliminarActividad(id)
         }
       ]
     });

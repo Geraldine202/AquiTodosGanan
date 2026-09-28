@@ -3,6 +3,38 @@ import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Observable } from 'rxjs';
 
 // ==========================================
+// INTERFACES Y MODELOS (INSCRITOS / ASISTENTES)
+// ==========================================
+
+/** Estudiante individual para el registro o consulta de asistencia */
+export interface EstudianteAsistencia {
+  rut_usuario: string;
+  presente: boolean;
+}
+
+/** Interfaz para un estudiante inscrito en una actividad (Resumen simple) */
+export interface EstudianteInscrito {
+  rut: string;
+  nombre: string;
+  asistio: boolean;
+}
+
+/** Respuesta del endpoint con el conteo y la lista de estudiantes inscritos */
+export interface ResumenListaInscritos {
+  id_actividad: number;
+  nombre_actividad: string;
+  total_inscritos: number;
+  total_asistentes: number;
+  estudiantes: EstudianteInscrito[];
+}
+
+/** Payload genérico para la confirmación masiva de asistencia */
+export interface AsistenciaPayload {
+  estudiantes?: EstudianteAsistencia[];
+  asistencia?: EstudianteAsistencia[];
+}
+
+// ==========================================
 // INTERFACES Y MODELOS (ACTIVIDADES)
 // ==========================================
 
@@ -19,15 +51,16 @@ export interface ActividadPayload {
   responsable_actividad: string;
   rut_usuario: string;
   id_tipo_actividad: number;
-  id_estado_actividad?: number; // Opcional (FastAPI asigna 1 por defecto al crear)
+  id_estado_actividad?: number; // FastAPI asigna 1 por defecto al crear
   id_sede: number;
-  fecha_inicio: string;  // Formato ISO string (ej: "2026-05-10T14:30:00")
-  fecha_termino: string; // Formato ISO string
+  fecha: string;        // Formato YYYY-MM-DD
+  hora_inicio: string;  // Formato HH:mm:ss
+  hora_termino: string; // Formato HH:mm:ss
   puntos: number;
   cupos: number;
   lugar: string;
   requisito?: string;
-  img_actv?: string;     // URL pública devuelta por el backend
+  img_actv?: string;
 }
 
 /** Respuesta completa de Actividad enviada por la API (con relaciones) */
@@ -36,8 +69,9 @@ export interface ActividadCompleta {
   nombre_actividad: string;
   descripcion: string;
   responsable_actividad: string;
-  fecha_inicio: string;
-  fecha_termino: string;
+  fecha: string;
+  hora_inicio: string;
+  hora_termino: string;
   id_tipo_actividad: number;
   id_estado_actividad: number;
   id_sede: number;
@@ -92,7 +126,6 @@ export interface PremioCompleto {
 // INTERFACES DE CATÁLOGOS Y USUARIOS
 // ==========================================
 
-/** Interfaz para ítems de catálogos simples (Sedes, Tipos, Estados) */
 export interface CatalogoItem {
   id_tipo_actividad?: number;
   id_estado_actividad?: number;
@@ -100,13 +133,11 @@ export interface CatalogoItem {
   descripcion: string;
 }
 
-/** Interfaz para categorías de premio */
 export interface CategoriaPremio {
   id_categoria: number;
   descripcion: string;
 }
 
-/** Interfaz para el catálogo de Docentes/Usuarios */
 export interface Docente {
   rut_usuario: string;
   nombre_completo: string;
@@ -114,7 +145,6 @@ export interface Docente {
   id_tipo_usuario?: number;
 }
 
-/** Interfaz para Consejeros de Carrera */
 export interface Consejero {
   rut_usuario: string;
   nombre_completo: string;
@@ -128,7 +158,6 @@ export interface Consejero {
 })
 export class ActividadService {
 
-  // URL base de tu backend FastAPI (se recomienda mover a environment.ts)
   private apiUrl: string = 'http://localhost:8000';
 
   private httpOptions = {
@@ -143,10 +172,7 @@ export class ActividadService {
   // ARCHIVOS / ALMACENAMIENTO DE IMÁGENES
   // ==========================================
 
-  /**
-   * Sube una imagen al backend (FastAPI) especificando el bucket ('actividad' o 'premio').
-   * Retorna la URL pública generada.
-   */
+  /** Sube una imagen al backend (FastAPI) especificando el bucket */
   subirImagen(
     file: File, 
     bucket: 'actividad' | 'premio' | 'premios' | string = 'actividad'
@@ -165,107 +191,112 @@ export class ActividadService {
   // CATÁLOGOS COMPARTIDOS
   // ==========================================
 
-  /** Obtiene docentes responsables (Docentes y Roles Administradores) */
   getDocentes(): Observable<Docente[]> {
     return this.http.get<Docente[]>(`${this.apiUrl}/docentes`);
   }
 
-  /** Obtiene específicamente los Consejeros de Carrera */
   getConsejeros(): Observable<Consejero[]> {
     return this.http.get<Consejero[]>(`${this.apiUrl}/consejeros`);
   }
 
-  /** Obtiene tipos de actividad (ej: Deportiva, Académica, etc.) */
   getTiposActividad(): Observable<CatalogoItem[]> {
     return this.http.get<CatalogoItem[]>(`${this.apiUrl}/tipos-actividad`);
   }
 
-  /** Obtiene estados de la actividad (ej: Programada, Finalizada) */
   getEstadosActividad(): Observable<CatalogoItem[]> {
     return this.http.get<CatalogoItem[]>(`${this.apiUrl}/estados-actividad`);
   }
 
-  /** Obtiene las categorías de premios */
   getCategoriasPremio(): Observable<CategoriaPremio[]> {
     return this.http.get<CategoriaPremio[]>(`${this.apiUrl}/categorias-premio`);
   }
 
-  /** Obtiene las sedes disponibles */
   getSedes(): Observable<CatalogoItem[]> {
     return this.http.get<CatalogoItem[]>(`${this.apiUrl}/sedes`);
   }
 
   // ==========================================
-  // CRUD DE ACTIVIDADES
+  // CRUD DE ACTIVIDADES Y ASISTENCIAS
   // ==========================================
 
-  /** Obtiene el listado completo de actividades con sus datos anidados */
   getActividades(): Observable<ActividadCompleta[]> {
     return this.http.get<ActividadCompleta[]>(`${this.apiUrl}/actividades`);
   }
 
-  /** Obtiene únicamente la cantidad total de actividades asociadas a un RUT de usuario */
   getConteoActividadesPorUsuario(rutUsuario: string): Observable<ConteoActividades> {
     return this.http.get<ConteoActividades>(`${this.apiUrl}/actividades/conteo/usuario/${rutUsuario}`);
   }
 
-  /** Obtiene las actividades creadas por un usuario en específico mediante su RUT */
   getActividadesPorUsuario(rutUsuario: string): Observable<ActividadCompleta[]> {
     return this.http.get<ActividadCompleta[]>(`${this.apiUrl}/actividades/usuario/${rutUsuario}`);
   }
 
-  /** Obtiene una actividad específica según su ID */
   getActividadPorId(id: number): Observable<ActividadCompleta> {
     return this.http.get<ActividadCompleta>(`${this.apiUrl}/actividades/${id}`);
   }
 
-  /** Registra una nueva actividad */
   crearActividad(actividad: ActividadPayload): Observable<ActividadCompleta> {
     return this.http.post<ActividadCompleta>(`${this.apiUrl}/actividades`, actividad, this.httpOptions);
   }
 
-  /** Actualiza una actividad existente */
   actualizarActividad(id: number, actividad: Partial<ActividadPayload>): Observable<ActividadCompleta> {
     return this.http.put<ActividadCompleta>(`${this.apiUrl}/actividades/${id}`, actividad, this.httpOptions);
   }
 
-  /** Elimina una actividad y limpia sus dependencias */
   eliminarActividad(id: number): Observable<{ mensaje: string }> {
     return this.http.delete<{ mensaje: string }>(`${this.apiUrl}/actividades/${id}`);
+  }
+
+  /** Obtiene la lista completa de inscritos y conteo de asistentes */
+  getEstudiantesInscritos(idActividad: number): Observable<ResumenListaInscritos> {
+    return this.http.get<ResumenListaInscritos>(`${this.apiUrl}/actividades/${idActividad}/lista-inscritos`);
+  }
+
+  getInscritosActividad(idActividad: number): Observable<any> {
+    return this.http.get<any>(`${this.apiUrl}/actividades/${idActividad}/inscritos`);
+  }
+
+  /**
+   * Guarda o actualiza la lista de asistencia en lote.
+   * El backend procesará `presente: true` y disparará la consolidación de puntos 
+   * en `puntaje_total` solo para actividades que ya hayan cumplido fecha/hora_termino.
+   */
+  registrarAsistenciaMasiva(
+    idActividad: number, 
+    estudiantes: EstudianteAsistencia[]
+  ): Observable<{ mensaje: string; actualizados: number }> {
+    return this.http.post<{ mensaje: string; actualizados: number }>(
+      `${this.apiUrl}/actividades/${idActividad}/asistencia`, 
+      { estudiantes },
+      this.httpOptions
+    );
   }
 
   // ==========================================
   // CRUD DE PREMIOS Y CANJES
   // ==========================================
 
-  /** Obtiene el listado completo de premios con sus datos anidados */
   getPremios(): Observable<PremioCompleto[]> {
     return this.http.get<PremioCompleto[]>(`${this.apiUrl}/premios`);
   }
 
-  /** Obtiene el listado de solicitudes de canje */
   getSolicitudesCanje(): Observable<any[]> {
     return this.http.get<any[]>(`${this.apiUrl}/solicitudes-canje`);
   }
 
-  /** Obtiene un premio específico según su ID */
   getPremioPorId(id: number): Observable<PremioCompleto> {
     return this.http.get<PremioCompleto>(`${this.apiUrl}/premios/${id}`);
   }
 
-  /** Registra un nuevo premio y su stock inicial en la sede correspondiente */
   crearPremio(premio: PremioPayload): Observable<PremioCompleto> {
     return this.http.post<PremioCompleto>(`${this.apiUrl}/premios`, premio, this.httpOptions);
   }
 
-  /** Actualiza un premio existente y/o su stock */
   actualizarPremio(id: number, premio: Partial<PremioPayload>): Observable<PremioCompleto> {
     return this.http.put<PremioCompleto>(`${this.apiUrl}/premios/${id}`, premio, this.httpOptions);
   }
 
-  /** Elimina un premio, su registro de stock e imagen asociada */
   eliminarPremio(id: number): Observable<{ mensaje: string }> {
     return this.http.delete<{ mensaje: string }>(`${this.apiUrl}/premios/${id}`);
   }
-  
 }

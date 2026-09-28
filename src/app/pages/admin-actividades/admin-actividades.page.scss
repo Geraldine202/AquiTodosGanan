@@ -1,5 +1,5 @@
 /* ==========================================================================
-   PALETA EXTRAÍDA DE TU PÁGINA
+   PALETA EXTRAÍDA DE TU PÁGINA Y ESTADOS DINÁMICOS
    ========================================================================== */
 $navy-header: #031427;     // Azul marino oscuro del Header y Footer
 $royal-blue: #2a68e8;      // Azul del botón "Nueva Actividad"
@@ -9,6 +9,19 @@ $card-bg: #ffffff;         // Fondo blanco de tarjetas y modales
 $text-dark: #0f172a;       // Texto principal
 $text-muted: #64748b;      // Texto secundario
 $border-light: #e2e8f0;    // Bordes sutiles
+
+/* Colores dinámicos según el estado recalculado */
+$color-programada-bg: #e0e7ff;
+$color-programada-txt: #2a68e8;
+
+$color-encurso-bg: #dcfce7;
+$color-encurso-txt: #15803d;
+
+$color-finalizada-bg: #f1f5f9;
+$color-finalizada-txt: #64748b;
+
+$color-cancelada-bg: #fee2e2;
+$color-cancelada-txt: #b91c1c;
 
 /* ==========================================================================
    1. FONDO PRINCIPAL Y ENCABEZADOS DE MODALES
@@ -42,7 +55,7 @@ app-header ion-toolbar,
 }
 
 /* ==========================================================================
-   2. TARJETAS DE ACTIVIDADES (ESTILO CLARO)
+   2. TARJETAS DE ACTIVIDADES Y ESTADOS DINÁMICOS
    ========================================================================== */
 .cards-grid {
   display: grid;
@@ -112,13 +125,35 @@ ion-card-content {
       margin: 0;
     }
 
+    /* Badge adaptable según la respuesta en minúsculas del backend/pipe */
     .estado-badge {
       font-size: 0.75rem;
       font-weight: 700;
       padding: 4px 10px;
       border-radius: 12px;
-      background: #e0e7ff;
-      color: $royal-blue;
+      text-transform: capitalize;
+      background: $color-programada-bg;
+      color: $color-programada-txt;
+
+      &.programada {
+        background: $color-programada-bg;
+        color: $color-programada-txt;
+      }
+
+      &.en\ curso, &.en-curso {
+        background: $color-encurso-bg;
+        color: $color-encurso-txt;
+      }
+
+      &.finalizada {
+        background: $color-finalizada-bg;
+        color: $color-finalizada-txt;
+      }
+
+      &.cancelada, &.suspendida {
+        background: $color-cancelada-bg;
+        color: $color-cancelada-txt;
+      }
     }
   }
 
@@ -141,6 +176,12 @@ ion-card-content {
         color: $royal-blue;
         font-size: 1.1rem;
       }
+    }
+
+    .info-group {
+      display: flex;
+      gap: 16px;
+      margin-top: 6px;
     }
   }
 
@@ -179,9 +220,19 @@ ion-card-content {
 
   .formulario-modal {
     padding: 20px;
+
+    .helper-text {
+      display: block;
+      font-size: 0.75rem;
+      color: $text-muted;
+      margin-top: -6px;
+      margin-bottom: 12px;
+      padding-left: 4px;
+      line-height: 1.2;
+    }
   }
 
-  /* Sección de carga de imagen ordenada */
+  /* Sección de carga de imagen */
   .upload-avatar-section {
     display: flex;
     align-items: center;
@@ -231,13 +282,23 @@ ion-card-content {
     }
   }
 
-  /* Inputs estilizados claros */
+  /* Inputs estilizados */
   .input-modal {
     --background: #f1f5f9;
     --border-radius: 10px;
     --padding-start: 12px;
     border: 1px solid $border-light;
     margin-bottom: 12px;
+
+    &.clickable-item {
+      cursor: pointer;
+    }
+
+    .input-icon {
+      color: $royal-blue;
+      font-size: 1.2rem;
+      margin-end: 8px;
+    }
 
     ion-label {
       color: $text-dark !important;
@@ -260,6 +321,23 @@ ion-card-content {
     height: 46px;
     font-weight: 700;
     margin-top: 16px;
+  }
+}
+
+/* Estado de lista vacía */
+.empty-state {
+  text-align: center;
+  padding: 40px 20px;
+  color: $text-muted;
+
+  ion-icon {
+    font-size: 3.5rem;
+    color: #cbd5e1;
+  }
+
+  p {
+    font-size: 0.95rem;
+    margin-top: 8px;
   }
 }
 
