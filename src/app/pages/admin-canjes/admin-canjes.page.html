@@ -1,0 +1,131 @@
+<app-header></app-header>
+  <!-- Filtro por Estados -->
+
+
+<ion-content class="ion-padding">
+    <ion-toolbar>
+    <ion-segment [(ngModel)]="filtroEstado" (ionChange)="aplicarFiltros()">
+      <ion-segment-button value="todos">Todos</ion-segment-button>
+      <ion-segment-button value="1">Solicitados</ion-segment-button>
+      <ion-segment-button value="2">Aprobados</ion-segment-button>
+      <ion-segment-button value="3">Retirados</ion-segment-button>
+      <ion-segment-button value="4">Cancelados</ion-segment-button>
+    </ion-segment>
+  </ion-toolbar>
+
+  <!-- Buscador en tiempo real -->
+  <ion-toolbar>
+    <ion-searchbar 
+      [(ngModel)]="busqueda" 
+      (ionInput)="aplicarFiltros()" 
+      placeholder="Buscar por RUT, Alumno o Premio...">
+    </ion-searchbar>
+  </ion-toolbar>
+
+
+  <ion-refresher slot="fixed" (ionRefresh)="cargarSolicitudes($event)">
+    <ion-refresher-content></ion-refresher-content>
+  </ion-refresher>
+
+  <div class="ion-text-center ion-padding" *ngIf="cargando">
+    <ion-spinner name="crescent" color="primary"></ion-spinner>
+    <p>Cargando solicitudes...</p>
+  </div>
+
+  <div class="ion-text-center ion-padding" *ngIf="!cargando && solicitudesFiltradas.length === 0">
+    <ion-icon name="file-tray-outline" style="font-size: 48px; color: #888;"></ion-icon>
+    <p>No hay solicitudes registradas.</p>
+  </div>
+
+  <ion-card *ngFor="let item of solicitudesFiltradas">
+    <ion-item lines="none">
+      <ion-avatar slot="start" *ngIf="item.premio?.imagen">
+        <img [src]="item.premio?.imagen" alt="Imagen premio" />
+      </ion-avatar>
+      <ion-label>
+        <h2><strong>{{ item.premio?.descripcion || 'Premio de Catálogo' }}</strong></h2>
+        <p>Alumno: {{ item.usuario?.nombre_completo || item.rut_usuario }}</p>
+        <p>RUT: {{ item.rut_usuario }}</p>
+      </ion-label>
+
+      <!-- Badge según id_estado_canje -->
+      <ion-badge slot="end" [color]="item.id_estado_canje === 1 ? 'warning' : item.id_estado_canje === 2 ? 'primary' : item.id_estado_canje === 3 ? 'success' : 'danger'">
+        <span *ngIf="item.id_estado_canje === 1">Solicitado</span>
+        <span *ngIf="item.id_estado_canje === 2">Aprobado</span>
+        <span *ngIf="item.id_estado_canje === 3">Retirado</span>
+        <span *ngIf="item.id_estado_canje === 4">Cancelado</span>
+      </ion-badge>
+    </ion-item>
+
+    <ion-card-content>
+      <!-- Sede del Alumno -->
+      <p class="ion-margin-bottom">
+        <strong>Sede Estudiante:</strong> 
+        <ion-badge color="tertiary" style="margin-left: 6px;">
+          <ion-icon name="location-outline"></ion-icon>
+          {{ item.nombre_sede_alumno || 'Sin Sede' }}
+        </ion-badge>
+      </p>
+
+      <!-- Stock en la Sede del Alumno -->
+      <p class="ion-margin-bottom">
+        <strong>Stock en Sede:</strong> 
+        <ion-badge [color]="(item.stock_sede_alumno ?? 0) > 0 ? 'success' : 'danger'" style="margin-left: 6px;">
+          {{ item.stock_sede_alumno ?? 0 }} unidades
+        </ion-badge>
+      </p>
+
+      <p><strong>Costo en Puntos:</strong> {{ item.costo_puntaje }} pts</p>
+      <p><strong>Fecha Solicitud:</strong> {{ item.fecha_solicitud | date:'dd/MM/yyyy HH:mm' }}</p>
+      
+      <!-- Plazo de retiro si está Aprobado (ID 2) -->
+      <div *ngIf="item.id_estado_canje === 2 && item.retiro_premio?.fecha_limite" class="ion-margin-top">
+        <ion-text color="tertiary">
+          <small><strong>Plazo retiro DAE:</strong> {{ item.retiro_premio?.fecha_limite | date:'dd/MM/yyyy' }}</small>
+        </ion-text>
+      </div>
+    </ion-card-content>
+
+    <!-- Botones de Acción según estado -->
+    <ion-row class="ion-padding-horizontal ion-padding-bottom">
+
+      <!-- Estado 1 (Solicitado): Permite Aprobar (2) o Rechazar (4) -->
+      <ng-container *ngIf="item.id_estado_canje === 1">
+        <ion-col size="6">
+          <ion-button 
+            expand="block" 
+            color="success" 
+            size="small" 
+            [disabled]="(item.stock_sede_alumno ?? 0) <= 0"
+            (click)="aprobarCanje(item)">
+            <ion-icon name="checkmark-circle-outline" slot="start"></ion-icon>
+            {{ (item.stock_sede_alumno ?? 0) > 0 ? 'Aprobar' : 'Sin Stock' }}
+          </ion-button>
+        </ion-col>
+        <ion-col size="6">
+          <ion-button expand="block" color="danger" fill="outline" size="small" (click)="cancelarPorStock(item)">
+            <ion-icon name="close-circle-outline" slot="start"></ion-icon>
+            Rechazar
+          </ion-button>
+        </ion-col>
+      </ng-container>
+
+      <!-- Estado 2 (Aprobado): Permite Entregar (3) o Cancelar (4) -->
+      <ng-container *ngIf="item.id_estado_canje === 2">
+        <ion-col size="8">
+          <ion-button expand="block" color="primary" size="small" (click)="marcarComoRetirado(item)">
+            <ion-icon name="gift-outline" slot="start"></ion-icon>
+            Entregar Premio
+          </ion-button>
+        </ion-col>
+        <ion-col size="4">
+          <ion-button expand="block" color="danger" fill="outline" size="small" (click)="cancelarPorStock(item)">
+            Cancelar
+          </ion-button>
+        </ion-col>
+      </ng-container>
+
+    </ion-row>
+  </ion-card>
+<app-footer></app-footer>
+</ion-content>

@@ -113,8 +113,7 @@ export class AdminAlumnosPage implements OnInit {
   }
 
   /**
-   * Extrae dinámicamente el puntaje total del alumno soportando
-   * números simples, arreglos devueltos por el backend o relaciones.
+   * Extrae dinámicamente el puntaje total del alumno
    */
   obtenerPuntajeReal(alu: any): number {
     if (!alu) return 0;
@@ -137,8 +136,7 @@ export class AdminAlumnosPage implements OnInit {
   }
 
   /**
-   * Obtiene el conteo real de actividades del backend únicamente si el usuario
-   * tiene un rol que permite estar a cargo de actividades (IDs 2, 3 o 4).
+   * Obtiene el conteo real de actividades del backend si el usuario es encargado
    */
   async obtenerActividadesReales(alu: any): Promise<number> {
     if (!alu || !alu.rut_usuario) return 0;
@@ -147,7 +145,6 @@ export class AdminAlumnosPage implements OnInit {
 
     if ([2, 3, 4].includes(tipoUser)) {
       try {
-        // Encodeamos la cadena del RUT para evitar rupturas de URL por caracteres especiales
         const rutSanitizado = encodeURIComponent(alu.rut_usuario);
 
         const conteo = await firstValueFrom(
@@ -167,7 +164,6 @@ export class AdminAlumnosPage implements OnInit {
 
   /**
    * Carga los usuarios/alumnos y asigna el conteo de actividades
-   * garantizando que coincida con lo buscado en el HTML
    */
   obtenerAlumnos() {
     this.alumnoService.getAlumnos().subscribe({
@@ -184,7 +180,6 @@ export class AdminAlumnosPage implements OnInit {
               ...alu,
               id_tipo_usuario: tipoUser,
               puntaje_total: this.obtenerPuntajeReal(alu),
-              // Propiedades vinculadas a las variables que lee tu HTML:
               actividades_a_cargo: esEncargado ? conteoActividades : 0,
               actividades_cargo_count: esEncargado ? conteoActividades : 0,
               actividades_inscritas: !esEncargado ? conteoActividades : (alu.actividades_inscritas || 0)
@@ -293,9 +288,6 @@ export class AdminAlumnosPage implements OnInit {
     }
   }
 
-  /**
-   * Filtrado dinámico por búsqueda de texto y pestaña seleccionada
-   */
   filtrarAlumnos() {
     if (!Array.isArray(this.alumnos)) {
       this.alumnosFiltrados = [];
@@ -305,7 +297,6 @@ export class AdminAlumnosPage implements OnInit {
     let resultado = [...this.alumnos];
     const texto = this.textoBuscar.trim().toLowerCase();
 
-    // 1. Filtrar por texto (RUT, Nombre o Carrera)
     if (texto !== '') {
       resultado = resultado.filter(alu => {
         const nombre = alu.nombre_completo ? String(alu.nombre_completo).toLowerCase() : '';
@@ -318,14 +309,12 @@ export class AdminAlumnosPage implements OnInit {
       });
     }
 
-    // 2. Filtrar por segmento activo
     if (this.filtroApartado === 'alumnos') {
       resultado = resultado.filter(alu => this.obtenerTipoUsuario(alu) !== 4);
     } else if (this.filtroApartado === 'consejeros') {
       resultado = resultado.filter(alu => this.obtenerTipoUsuario(alu) === 4);
     }
 
-    // 3. Ordenar resultados: Consejeros primero (4) y luego Alumnos (1)
     resultado.sort((a, b) => {
       const tipoA = this.obtenerTipoUsuario(a);
       const tipoB = this.obtenerTipoUsuario(b);
@@ -354,6 +343,11 @@ export class AdminAlumnosPage implements OnInit {
     }
   }
 
+  /**
+   * Crea el alumno en el backend.
+   * La API se encarga de generar el hash con los números del RUT sin DV
+   * y enviar la notificación con las credenciales al correo del alumno.
+   */
   agregarAlumno() {
     if (!this.nuevoAlumno.rut_usuario || !this.nuevoAlumno.nombre_completo || !this.nuevoAlumno.correo) {
       this.mostrarToast('RUT, Nombre y Correo son obligatorios', 'warning');
@@ -383,7 +377,7 @@ export class AdminAlumnosPage implements OnInit {
 
     this.alumnoService.addAlumno(payload, this.archivoSeleccionado || undefined).subscribe({
       next: () => {
-        this.mostrarToast('Alumno registrado correctamente', 'success');
+        this.mostrarToast('Alumno registrado con éxito. Se enviaron las credenciales por correo.', 'success');
         this.modalAgregar.dismiss();
         this.resetForm();
         this.obtenerAlumnos();
@@ -649,5 +643,4 @@ export class AdminAlumnosPage implements OnInit {
     });
     await toast.present();
   }
-  
 }

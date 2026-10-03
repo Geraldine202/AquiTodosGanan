@@ -81,6 +81,15 @@
             <ion-icon name="gift-outline" slot="start" class="menu-icon"></ion-icon>
             <ion-label class="menu-label notranslate" translate="no">Administrar Premios</ion-label>
           </ion-item>
+                    <ion-item 
+            button
+            (click)="cerrarMenu()" 
+            routerLink="/admin-canjes" 
+            routerLinkActive="menu-item-activo"
+            class="menu-item-custom">
+            <ion-icon name="gift-outline" slot="start" class="menu-icon"></ion-icon>
+            <ion-label class="menu-label notranslate" translate="no">Solicitudes Canjes</ion-label>
+          </ion-item>
           <ion-item 
             button
             (click)="cerrarMenu()" 

@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
-import { HttpClient, HttpHeaders } from '@angular/common/http';
+import { HttpClient, HttpHeaders, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
+
 
 // ==========================================
 // INTERFACES Y MODELOS (INSCRITOS / ASISTENTES)
@@ -151,8 +152,55 @@ export interface Consejero {
   correo: string;
   id_tipo_usuario?: number;
 }
+export interface SolicitudCanje {
+  id_canje: number;
+  rut_usuario: string;
+  costo_puntaje: number;
+  fecha_solicitud: string;
+  id_estado_canje: number;
 
+  // Propiedades calculadas en el frontend
+  nombre_sede_alumno?: string;
+  stock_sede_alumno?: number;
 
+  // Objeto Usuario
+  usuario?: {
+    rut_usuario: string;
+    nombre_completo: string;
+    id_sede: number;
+    sede?: {
+      id_sede: number;
+      descripcion: string;
+    } | Array<{ id_sede: number; descripcion: string }>;
+  };
+
+  // Objeto Premio (se agrega imagen opcional)
+  premio?: {
+    id_premio: number;
+    descripcion: string;
+    puntos_requeridos: number;
+    imagen?: string; // <--- Se agrega esta propiedad
+    stock_sede?: Array<{
+      id_stock: number;
+      cantidad: number;
+      id_sede: number;
+    }>;
+  };
+
+  // Objeto Estado Canje
+  estado_canje?: {
+    id_estado_canje: number;
+    descripcion: string;
+  };
+
+  // Objeto Retiro Premio (se agrega esta propiedad)
+  retiro_premio?: { // <--- Se agrega este objeto opcional
+    id_retiro?: number;
+    fecha_limite?: string;
+    retirado?: boolean;
+    id_canje?: number;
+  };
+}
 @Injectable({
   providedIn: 'root',
 })
@@ -299,4 +347,36 @@ export class ActividadService {
   eliminarPremio(id: number): Observable<{ mensaje: string }> {
     return this.http.delete<{ mensaje: string }>(`${this.apiUrl}/premios/${id}`);
   }
+  // ==========================================
+// MÉTODOS PARA EL PANEL ADMINISTRATIVO
+// ==========================================
+
+/**
+ * Obtiene el listado completo de solicitudes de canje
+ */
+// En actividad.service.ts
+obtenerCanjes(): Observable<SolicitudCanje[]> {
+  return this.http.get<SolicitudCanje[]>(`${this.apiUrl}/premios/solicitudes`);
+}
+/**
+ * Aprueba una solicitud de canje (Aplica el descuento real de puntos y stock)
+ */
+aprobarCanje(idCanje: number): Observable<any> {
+  return this.http.put(`${this.apiUrl}/premios/aprobar/${idCanje}`, {}, this.httpOptions);
+}
+
+/**
+ * Confirma la entrega presencial en DAE
+ */
+marcarComoRetirado(idCanje: number): Observable<any> {
+  return this.http.put(`${this.apiUrl}/premios/marcar-retirado/${idCanje}`, {}, this.httpOptions);
+}
+
+/**
+ * Rechaza una solicitud de canje sin modificar saldo de puntos
+ */
+cancelarPorStock(idCanje: number): Observable<any> {
+  return this.http.put(`${this.apiUrl}/premios/cancelar/${idCanje}`, {}, this.httpOptions);
+}
+
 }

@@ -140,48 +140,46 @@ export class AdminPremiosPage implements OnInit {
   /**
    * Cambia la visibilidad directamente desde la tarjeta principal
    */
-  async cambiarVisibilidad(premio: any) {
-    if (premio.actualizandoVisibilidad) return;
+async cambiarVisibilidad(premio: any) {
+  if (premio.actualizandoVisibilidad) return;
 
-    const estadoAnterior = premio.estado_visibilidad;
-    const nuevoEstado = !estadoAnterior;
+  const estadoAnterior = premio.estado_visibilidad;
+  const nuevoEstado = !estadoAnterior;
 
-    // Actualización optimista en la UI
-    premio.actualizandoVisibilidad = true;
-    premio.estado_visibilidad = nuevoEstado;
+  premio.actualizandoVisibilidad = true;
+  premio.estado_visibilidad = nuevoEstado;
 
-    const payload: PremioPayload = {
-      descripcion: premio.descripcion,
-      id_categoria: Number(premio.id_categoria),
-      id_sede: Number(premio.id_sede),
-      puntos_requeridos: Number(premio.puntos_requeridos || 1),
-      stock: Number(this.obtenerStock(premio)),
-      valor: Number(premio.valor || 0),
-      rut_usuario: premio.rut_usuario || premio.usuario?.rut_usuario || '',
-      estado_visibilidad: nuevoEstado,
-      imagen: premio.imagen || ''
-    };
+  // Se remueve 'valor' de este objeto
+  const payload: Omit<PremioPayload, 'valor'> | any = {
+    descripcion: premio.descripcion,
+    id_categoria: Number(premio.id_categoria),
+    id_sede: Number(premio.id_sede),
+    puntos_requeridos: Number(premio.puntos_requeridos || 1),
+    stock: Number(this.obtenerStock(premio)),
+    rut_usuario: premio.rut_usuario || premio.usuario?.rut_usuario || '',
+    estado_visibilidad: nuevoEstado,
+    imagen: premio.imagen || ''
+  };
 
-    try {
-      await firstValueFrom(
-        this.actividadService.actualizarPremio(premio.id_premio, payload)
-      );
+  try {
+    await firstValueFrom(
+      this.actividadService.actualizarPremio(premio.id_premio, payload)
+    );
 
-      const mensaje = nuevoEstado 
-        ? 'Premio visible para estudiantes' 
-        : 'Premio ocultado para estudiantes';
-      this.mostrarToast(mensaje, 'success');
+    const mensaje = nuevoEstado 
+      ? 'Premio visible para estudiantes' 
+      : 'Premio ocultado para estudiantes';
+    this.mostrarToast(mensaje, 'success');
 
-    } catch (err: any) {
-      // Revertir cambio si la API falla
-      premio.estado_visibilidad = estadoAnterior;
-      console.error('Error al cambiar visibilidad:', err);
-      const mensajeError = err.error?.detail || 'Error al cambiar la visibilidad';
-      this.mostrarToast(mensajeError, 'danger');
-    } finally {
-      premio.actualizandoVisibilidad = false;
-    }
+  } catch (err: any) {
+    premio.estado_visibilidad = estadoAnterior;
+    console.error('Error al cambiar visibilidad:', err);
+    const mensajeError = err.error?.detail || 'Error al cambiar la visibilidad';
+    this.mostrarToast(mensajeError, 'danger');
+  } finally {
+    premio.actualizandoVisibilidad = false;
   }
+}
 
   campoInvalido(campo: string): boolean {
     const control = this.premioForm.get(campo);
@@ -274,7 +272,6 @@ export class AdminPremiosPage implements OnInit {
         id_sede: Number(formVal.id_sede),
         puntos_requeridos: Number(formVal.puntos_requeridos || 1),
         stock: Number(formVal.stock || 0),
-        valor: Number(formVal.valor || 0),
         rut_usuario: formVal.rut_usuario,
         estado_visibilidad: Boolean(formVal.estado_visibilidad),
         imagen: urlImagen

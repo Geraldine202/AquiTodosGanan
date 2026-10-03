@@ -243,7 +243,9 @@
       localStorage.removeItem('tokenAcceso');
       this.usuarioSubject.next(null);
     }
-
+  cambiarPasswordObligatorio(datos: { rut_usuario: string; nueva_password: string }): Observable<any> {
+    return this.http.put(`${this.baseUrl}/auth/cambiar-password-obligatorio`, datos);
+  }
     cerrarSesion() {
       this.logout().subscribe();
     }

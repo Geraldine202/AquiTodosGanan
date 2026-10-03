@@ -34,7 +34,11 @@ const routes: Routes = [
     path: 'admin-premios',
     loadChildren: () => import('./pages/admin-premios/admin-premios.module').then( m => m.AdminPremiosPageModule),
     canActivate: [authGuard]
+  },  {
+    path: 'admin-canjes',
+    loadChildren: () => import('./pages/admin-canjes/admin-canjes.module').then( m => m.AdminCanjesPageModule)
   }
+
 
 
 
