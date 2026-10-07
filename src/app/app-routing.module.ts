@@ -37,6 +37,10 @@ const routes: Routes = [
   },  {
     path: 'admin-canjes',
     loadChildren: () => import('./pages/admin-canjes/admin-canjes.module').then( m => m.AdminCanjesPageModule)
+  },
+  {
+    path: 'reportes',
+    loadChildren: () => import('./pages/reportes/reportes.module').then( m => m.ReportesPageModule)
   }
 
 

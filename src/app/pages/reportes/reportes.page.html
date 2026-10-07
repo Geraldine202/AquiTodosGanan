@@ -1,0 +1,227 @@
+<app-header></app-header>
+
+<ion-content class="ion-padding">
+
+  <!-- SEGMENTO DE SELECCIÓN DE REPORTE -->
+  <ion-segment [(ngModel)]="modoReporte" (ionChange)="cambiarModoReporte()" class="ion-margin-bottom">
+    <ion-segment-button value="DETALLE_ACTIVIDAD">
+      <ion-icon name="calendar-outline"></ion-icon>
+      <ion-label>Detalle de Actividad</ion-label>
+    </ion-segment-button>
+    <ion-segment-button value="STOCK_SEDE">
+      <ion-icon name="cube-outline"></ion-icon>
+      <ion-label>Stock de Premios</ion-label>
+    </ion-segment-button>
+  </ion-segment>
+
+  <!-- FILTROS Y CONTROLES DE BÚSQUEDA -->
+  <ion-card class="filter-card ion-no-margin ion-margin-bottom">
+    <ion-card-content>
+      <ion-grid class="ion-no-padding">
+        
+        <!-- Filtros: Detalle por Actividad -->
+        <ion-row *ngIf="modoReporte === 'DETALLE_ACTIVIDAD'" class="ion-align-items-center">
+          <ion-col size="12" size-md="8">
+            <ion-item lines="outline" class="custom-item">
+              <ion-label position="stacked">Seleccionar Actividad</ion-label>
+              <ion-select [(ngModel)]="idActividadSeleccionada" (ionChange)="generarReporte()" placeholder="Seleccione Actividad">
+                <ion-select-option *ngFor="let act of actividadesList" [value]="act.id_actividad">
+                  {{ act.nombre_actividad }} ({{ act.fecha }})
+                </ion-select-option>
+              </ion-select>
+            </ion-item>
+          </ion-col>
+          <ion-col size="12" size-md="4" class="ion-text-right">
+            <ion-button expand="block" color="primary" (click)="generarReporte()">
+              <ion-icon name="search-outline" slot="start"></ion-icon>
+              Consultar
+            </ion-button>
+          </ion-col>
+        </ion-row>
+
+        <!-- Filtros: Stock por Sede -->
+        <ion-row *ngIf="modoReporte === 'STOCK_SEDE'" class="ion-align-items-center">
+          <ion-col size="12" size-md="5">
+            <ion-item lines="outline" class="custom-item">
+              <ion-label position="stacked">Sede</ion-label>
+              <ion-select [(ngModel)]="idSedeSeleccionada" (ionChange)="generarReporte()" placeholder="Todas las Sedes">
+                <ion-select-option [value]="null">Todas las Sedes</ion-select-option>
+                <ion-select-option *ngFor="let sede of sedesList" [value]="sede.id_sede">
+                  {{ sede.descripcion }}
+                </ion-select-option>
+              </ion-select>
+            </ion-item>
+          </ion-col>
+          <ion-col size="12" size-md="4">
+            <ion-item lines="outline" class="custom-item">
+              <ion-label position="stacked">Estado Inventario</ion-label>
+              <ion-select [(ngModel)]="filtroEstadoStock" (ionChange)="generarReporte()">
+                <ion-select-option value="TODOS">Todos</ion-select-option>
+                <ion-select-option value="CRITICO">Stock Crítico (≤ 5)</ion-select-option>
+                <ion-select-option value="AGOTADO">Agotados (0)</ion-select-option>
+              </ion-select>
+            </ion-item>
+          </ion-col>
+          <ion-col size="12" size-md="3" class="ion-text-right">
+            <ion-button expand="block" color="primary" (click)="generarReporte()">
+              <ion-icon name="search-outline" slot="start"></ion-icon>
+              Consultar
+            </ion-button>
+          </ion-col>
+        </ion-row>
+
+      </ion-grid>
+    </ion-card-content>
+  </ion-card>
+
+  <!-- SPINNER DE CARGA -->
+  <div *ngIf="cargando" class="ion-text-center ion-padding my-4">
+    <ion-spinner name="crescent" color="primary"></ion-spinner>
+    <p>Cargando información del servidor...</p>
+  </div>
+
+  <!-- SECCIÓN PRINCIPAL (SIEMPRE VISIBLE TRAS CONSULTAR) -->
+  <div *ngIf="!cargando">
+
+    <!-- METRICAS KPI: ACTIVIDAD -->
+    <ion-grid *ngIf="modoReporte === 'DETALLE_ACTIVIDAD'" class="ion-no-padding ion-margin-bottom">
+      <ion-row>
+        <ion-col size="6" size-md="3">
+          <ion-card class="kpi-card ion-text-center ion-no-margin">
+            <h2>{{ reporteData.kpis?.total_inscritos || 0 }}</h2>
+            <p>Inscritos</p>
+          </ion-card>
+        </ion-col>
+        <ion-col size="6" size-md="3">
+          <ion-card class="kpi-card ion-text-center ion-no-margin">
+            <h2 class="text-success">{{ reporteData.kpis?.total_presentes || 0 }}</h2>
+            <p>Presentes</p>
+          </ion-card>
+        </ion-col>
+        <ion-col size="6" size-md="3">
+          <ion-card class="kpi-card ion-text-center ion-no-margin">
+            <h2>{{ reporteData.kpis?.porcentaje_asistencia || 0 }}%</h2>
+            <p>% Asistencia</p>
+          </ion-card>
+        </ion-col>
+        <ion-col size="6" size-md="3">
+          <ion-card class="kpi-card ion-text-center ion-no-margin">
+            <h2 class="text-primary">{{ reporteData.kpis?.total_puntos_repartidos || 0 }}</h2>
+            <p>Pts Repartidos</p>
+          </ion-card>
+        </ion-col>
+      </ion-row>
+    </ion-grid>
+
+    <!-- METRICAS KPI: STOCK -->
+    <ion-grid *ngIf="modoReporte === 'STOCK_SEDE'" class="ion-no-padding ion-margin-bottom">
+      <ion-row>
+        <ion-col size="4">
+          <ion-card class="kpi-card ion-text-center ion-no-margin">
+            <h2>{{ reporteData.kpis?.total_productos || 0 }}</h2>
+            <p>Productos</p>
+          </ion-card>
+        </ion-col>
+        <ion-col size="4">
+          <ion-card class="kpi-card ion-text-center ion-no-margin">
+            <h2>{{ reporteData.kpis?.total_unidades_stock || 0 }}</h2>
+            <p>Unidades Totales</p>
+          </ion-card>
+        </ion-col>
+        <ion-col size="4">
+          <ion-card class="kpi-card ion-text-center ion-no-margin">
+            <h2 class="text-danger">{{ reporteData.kpis?.alertas_criticas || 0 }}</h2>
+            <p>Stock Crítico</p>
+          </ion-card>
+        </ion-col>
+      </ion-row>
+    </ion-grid>
+
+    <!-- ACCIONES DE EXPORTACIÓN (EXCEL / PDF) -->
+    <div class="ion-display-flex ion-justify-content-between ion-align-items-center ion-margin-bottom">
+      <h3 class="section-title">Detalle de Registros</h3>
+      <div class="export-actions">
+        <ion-button color="success" size="small" (click)="exportarExcel()" [disabled]="!reporteData.detalles || reporteData.detalles.length === 0">
+          <ion-icon name="document-text-outline" slot="start"></ion-icon>
+          Excel
+        </ion-button>
+        <ion-button color="danger" size="small" (click)="exportarPDF()" [disabled]="!reporteData.detalles || reporteData.detalles.length === 0">
+          <ion-icon name="download-outline" slot="start"></ion-icon>
+          PDF
+        </ion-button>
+      </div>
+    </div>
+
+    <!-- TABLAS DE RESULTADOS (SI TIENE DATOS) -->
+    <div *ngIf="reporteData.detalles && reporteData.detalles.length > 0">
+      
+      <!-- Tabla Actividad -->
+      <div class="table-container" *ngIf="modoReporte === 'DETALLE_ACTIVIDAD'">
+        <table class="reporte-table">
+          <thead>
+            <tr>
+              <th>RUT</th>
+              <th>Estudiante</th>
+              <th>Correo</th>
+              <th>Estado</th>
+              <th>Puntos</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let row of reporteData.detalles">
+              <td>{{ row.rut }}</td>
+              <td>{{ row.estudiante }}</td>
+              <td>{{ row.correo }}</td>
+              <td>
+                <ion-badge [color]="row.asistencia === 'Presente' ? 'success' : 'medium'">
+                  {{ row.asistencia }}
+                </ion-badge>
+              </td>
+              <td><strong>{{ row.puntos }}</strong> pts</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Tabla Stock -->
+      <div class="table-container" *ngIf="modoReporte === 'STOCK_SEDE'">
+        <table class="reporte-table">
+          <thead>
+            <tr>
+              <th>Premio</th>
+              <th>Categoría</th>
+              <th>Sede</th>
+              <th>Costo Pts</th>
+              <th>Stock</th>
+              <th>Estado</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let row of reporteData.detalles">
+              <td>{{ row.premio }}</td>
+              <td>{{ row.categoria }}</td>
+              <td>{{ row.sede }}</td>
+              <td>{{ row.costo_puntos }} pts</td>
+              <td><strong>{{ row.stock_actual }}</strong> un.</td>
+              <td>
+                <ion-badge [color]="row.stock_actual > 5 ? 'success' : (row.stock_actual > 0 ? 'warning' : 'danger')">
+                  {{ row.estado_stock }}
+                </ion-badge>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+    </div>
+
+    <!-- MENSAJE INFORMATIVO CUANDO NO HAY FILAS REGISTRADAS -->
+    <ion-card *ngIf="!reporteData.detalles || reporteData.detalles.length === 0" class="empty-card ion-text-center ion-padding">
+      <ion-icon name="search-outline" class="empty-icon"></ion-icon>
+      <h4>Sin inscritos en la actividad seleccionada</h4>
+      <p>No existen alumnos inscritos en esta actividad. Puedes probar seleccionando otra actividad en la barra de filtros superior o exportar este resumen en blanco.</p>
+    </ion-card>
+
+  </div>
+ <app-footer></app-footer>
+</ion-content>

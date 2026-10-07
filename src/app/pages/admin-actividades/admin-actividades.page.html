@@ -87,41 +87,80 @@
 
           <hr class="divisor-tarjeta" />
 
-          <!-- ACCIONES SEGÚN EL ESTADO DE LA ACTIVIDAD -->
-          <div class="acciones">
-            
-            <!-- ACTIVIDADES PROGRAMADAS: EDITAR Y ELIMINAR -->
-            <ng-container *ngIf="esProgramada(act)">
-              <ion-button 
-                fill="clear" 
-                class="btn-editar" 
-                (click)="prepararEdicion(act, modalEdicion)">
-                <ion-icon name="create-outline" slot="start"></ion-icon>
-                Editar
-              </ion-button>
+                <!-- ACCIONES SEGÚN EL ESTADO DE LA ACTIVIDAD -->
+      <!-- ACCIONES SEGÚN EL ESTADO Y REGLAS DE LA ACTIVIDAD -->
+      <div class="acciones">
+        
+        <!-- 1. ACTIVIDADES PROGRAMADAS: EDITAR, INICIAR Y ELIMINAR -->
+        <ng-container *ngIf="esProgramada(act)">
+          <ion-button 
+            fill="clear" 
+            color="success" 
+            (click)="iniciarActividadAdmin(act)">
+            <ion-icon name="play-circle-outline" slot="start"></ion-icon>
+            Iniciar
+          </ion-button>
 
-              <ion-button 
-                fill="clear" 
-                class="btn-eliminar" 
-                color="danger" 
-                (click)="confirmarEliminacion(act)">
-                <ion-icon name="trash-outline" slot="start"></ion-icon>
-                Eliminar
-              </ion-button>
-            </ng-container>
+          <ion-button 
+            fill="clear" 
+            class="btn-editar" 
+            (click)="prepararEdicion(act, modalEdicion)">
+            <ion-icon name="create-outline" slot="start"></ion-icon>
+            Editar
+          </ion-button>
 
-            <!-- ACTIVIDADES HISTÓRICAS / EN CURSO / FINALIZADAS: VER DETALLES Y ASISTENCIA -->
-            <ng-container *ngIf="!esProgramada(act)">
-              <ion-button 
-                fill="clear" 
-                color="primary" 
-                (click)="verDetallesEstudiantes(act, modalDetalles)">
-                <ion-icon name="people-circle-outline" slot="start"></ion-icon>
-                Detalles / Asistencia
-              </ion-button>
-            </ng-container>
+          <ion-button 
+            fill="clear" 
+            class="btn-eliminar" 
+            color="danger" 
+            (click)="confirmarEliminacion(act)">
+            <ion-icon name="trash-outline" slot="start"></ion-icon>
+            Eliminar
+          </ion-button>
+        </ng-container>
 
-          </div>
+        <!-- 2. ACTIVIDADES EN CURSO: DETENER/FINALIZAR Y TOMAR ASISTENCIA -->
+        <ng-container *ngIf="esEnCurso(act)">
+          <ion-button 
+            fill="clear" 
+            color="danger" 
+            (click)="terminarActividadAdmin(act)">
+            <ion-icon name="stop-circle-outline" slot="start"></ion-icon>
+            Detener
+          </ion-button>
+
+          <ion-button 
+            fill="clear" 
+            color="primary" 
+            (click)="verDetallesEstudiantes(act, modalDetalles)">
+            <ion-icon name="people-circle-outline" slot="start"></ion-icon>
+            Asistencia
+          </ion-button>
+        </ng-container>
+
+        <!-- 3. ACTIVIDADES VENCIDAS SIN PARTICIPANTES: BOTÓN REPROGRAMAR -->
+        <ng-container *ngIf="puedeReprogramar(act)">
+          <ion-button 
+            fill="clear" 
+            color="warning" 
+            (click)="prepararReprogramacion(act, modalEdicion)">
+            <ion-icon name="calendar-clear-outline" slot="start"></ion-icon>
+            Reprogramar
+          </ion-button>
+        </ng-container>
+
+        <!-- 4. ACTIVIDADES FINALIZADAS/HISTÓRICAS: VER DETALLES -->
+        <ng-container *ngIf="esFinalizada(act) && !puedeReprogramar(act)">
+          <ion-button 
+            fill="clear" 
+            color="medium" 
+            (click)="verDetallesEstudiantes(act, modalDetalles)">
+            <ion-icon name="eye-outline" slot="start"></ion-icon>
+            Ver Historial
+          </ion-button>
+        </ng-container>
+
+      </div>
         </ion-card-content>
       </ion-card>
     </div>

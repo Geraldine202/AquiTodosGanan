@@ -378,5 +378,23 @@ marcarComoRetirado(idCanje: number): Observable<any> {
 cancelarPorStock(idCanje: number): Observable<any> {
   return this.http.put(`${this.apiUrl}/premios/cancelar/${idCanje}`, {}, this.httpOptions);
 }
+cancelarSolicitudCanje(payload: { rut_alumno: string; id_premio: number }): Observable<any> {
+  // Ajusta la URL según la ruta de tu backend FastAPI (ej: POST /solicitud-canje/cancelar o PUT /solicitud-canje/cancelar)
+  return this.http.post<any>(`${this.apiUrl}/solicitud-canje/cancelar`, payload);
+}
 
+// Iniciar actividad (Poner en curso)
+iniciarActividad(idActividad: number): Observable<any> {
+  return this.http.put(`${this.apiUrl}/actividades/${idActividad}/iniciar`, {});
+}
+
+// Terminar actividad (Finalizar y otorgar puntos)
+terminarActividad(idActividad: number): Observable<any> {
+  return this.http.put(`${this.apiUrl}/actividades/${idActividad}/terminar`, {});
+}
+
+// Reprogramar actividad
+reprogramarActividad(idActividad: number, datos: { fecha: string; hora_inicio: string; hora_termino: string }): Observable<any> {
+  return this.http.put(`${this.apiUrl}/actividades/${idActividad}/reprogramar`, datos);
+}
 }

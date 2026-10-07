@@ -234,7 +234,7 @@ async cambiarVisibilidad(premio: any) {
       valor: premio.valor || 0,
       rut_usuario: premio.rut_usuario || premio.usuario?.rut_usuario || '',
       estado_visibilidad: premio.estado_visibilidad ?? true,
-      imagen: premio.imagen || ''
+      imagen: premio.imagen || 'assets/logo.png'
     });
 
     this.modalAbierto = true;
