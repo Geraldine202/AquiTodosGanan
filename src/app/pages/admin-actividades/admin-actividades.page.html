@@ -86,81 +86,93 @@
           </div>
 
           <hr class="divisor-tarjeta" />
+          <!-- ACCIONES SEGÚN EL ESTADO Y REGLAS DE LA ACTIVIDAD -->
+          <div class="acciones">
+            
+            <!-- 1. ACTIVIDADES PROGRAMADAS: INICIAR, EDITAR Y ELIMINAR -->
+            <ng-container *ngIf="esProgramada(act) && !esFinalizada(act)">
 
-                <!-- ACCIONES SEGÚN EL ESTADO DE LA ACTIVIDAD -->
-      <!-- ACCIONES SEGÚN EL ESTADO Y REGLAS DE LA ACTIVIDAD -->
-      <div class="acciones">
-        
-        <!-- 1. ACTIVIDADES PROGRAMADAS: EDITAR, INICIAR Y ELIMINAR -->
-        <ng-container *ngIf="esProgramada(act)">
+              <!-- Botón Iniciar Actividad -->
+              <ion-button 
+                fill="clear" 
+                color="success" 
+                (click)="iniciarActividadAdmin(act)">
+                <ion-icon name="play-circle-outline" slot="start"></ion-icon>
+                Iniciar
+              </ion-button>
+
+              <!-- Ver Inscritos (Se muestra SIEMPRE para revisar la lista de alumnos en tiempo real) -->
+              <ion-button 
+                fill="clear" 
+                color="tertiary" 
+                (click)="verDetallesEstudiantes(act, modalDetalles)">
+                <ion-icon name="people-outline" slot="start"></ion-icon>
+                Inscritos
+              </ion-button>
+
+              <!-- Mostrar Editar solo si NO tiene inscritos -->
+              <ion-button 
+                *ngIf="!tieneInscritos(act)" 
+                color="primary" 
+                fill="clear" 
+                (click)="prepararEdicion(act, modalEdicion)">
+                <ion-icon name="create-outline" slot="icon-only"></ion-icon>
+                Editar
+              </ion-button>
+
+              <!-- Mostrar Eliminar solo si NO tiene inscritos -->
+              <ion-button 
+                *ngIf="!tieneInscritos(act)" 
+                color="danger" 
+                fill="clear" 
+                (click)="confirmarEliminacion(act)">
+                <ion-icon name="trash-outline" slot="icon-only"></ion-icon>
+                Eliminar
+              </ion-button>
+
+            </ng-container>
+
+            <!-- 2. ACTIVIDADES EN CURSO: DETENER Y ASISTENCIA (Solo si NO está finalizada) -->
+            <ng-container *ngIf="esEnCurso(act) && !esFinalizada(act)">
+              <ion-button 
+                fill="clear" 
+                color="danger" 
+                (click)="terminarActividadAdmin(act)">
+                <ion-icon name="stop-circle-outline" slot="start"></ion-icon>
+                Detener
+              </ion-button>
           <ion-button 
-            fill="clear" 
-            color="success" 
-            (click)="iniciarActividadAdmin(act)">
-            <ion-icon name="play-circle-outline" slot="start"></ion-icon>
-            Iniciar
-          </ion-button>
+              fill="clear" 
+              color="tertiary" 
+              (click)="verDetallesEstudiantes(act, modalDetalles)">
+              <ion-icon name="people-outline" slot="start"></ion-icon>
+              Inscritos
+            </ion-button>
+            </ng-container>
 
-          <ion-button 
-            fill="clear" 
-            class="btn-editar" 
-            (click)="prepararEdicion(act, modalEdicion)">
-            <ion-icon name="create-outline" slot="start"></ion-icon>
-            Editar
-          </ion-button>
+            <!-- 3. REPROGRAMAR: Solo si está vencida/finalizada Y sin participantes registrados -->
+            <ng-container *ngIf="puedeReprogramar(act)">
+              <ion-button 
+                fill="clear" 
+                color="warning" 
+                (click)="prepararReprogramacion(act, modalEdicion)">
+                <ion-icon name="calendar-clear-outline" slot="start"></ion-icon>
+                Reprogramar
+              </ion-button>
+            </ng-container>
 
-          <ion-button 
-            fill="clear" 
-            class="btn-eliminar" 
-            color="danger" 
-            (click)="confirmarEliminacion(act)">
-            <ion-icon name="trash-outline" slot="start"></ion-icon>
-            Eliminar
-          </ion-button>
-        </ng-container>
+            <!-- 4. ACTIVIDADES FINALIZADAS/HISTÓRICAS CON O SIN ALUMNOS: VER HISTORIAL -->
+            <ng-container *ngIf="esFinalizada(act) && !puedeReprogramar(act)">
+              <ion-button 
+                fill="clear" 
+                color="medium" 
+                (click)="verDetallesEstudiantes(act, modalDetalles)">
+                <ion-icon name="eye-outline" slot="start"></ion-icon>
+                Ver Historial
+              </ion-button>
+            </ng-container>
 
-        <!-- 2. ACTIVIDADES EN CURSO: DETENER/FINALIZAR Y TOMAR ASISTENCIA -->
-        <ng-container *ngIf="esEnCurso(act)">
-          <ion-button 
-            fill="clear" 
-            color="danger" 
-            (click)="terminarActividadAdmin(act)">
-            <ion-icon name="stop-circle-outline" slot="start"></ion-icon>
-            Detener
-          </ion-button>
-
-          <ion-button 
-            fill="clear" 
-            color="primary" 
-            (click)="verDetallesEstudiantes(act, modalDetalles)">
-            <ion-icon name="people-circle-outline" slot="start"></ion-icon>
-            Asistencia
-          </ion-button>
-        </ng-container>
-
-        <!-- 3. ACTIVIDADES VENCIDAS SIN PARTICIPANTES: BOTÓN REPROGRAMAR -->
-        <ng-container *ngIf="puedeReprogramar(act)">
-          <ion-button 
-            fill="clear" 
-            color="warning" 
-            (click)="prepararReprogramacion(act, modalEdicion)">
-            <ion-icon name="calendar-clear-outline" slot="start"></ion-icon>
-            Reprogramar
-          </ion-button>
-        </ng-container>
-
-        <!-- 4. ACTIVIDADES FINALIZADAS/HISTÓRICAS: VER DETALLES -->
-        <ng-container *ngIf="esFinalizada(act) && !puedeReprogramar(act)">
-          <ion-button 
-            fill="clear" 
-            color="medium" 
-            (click)="verDetallesEstudiantes(act, modalDetalles)">
-            <ion-icon name="eye-outline" slot="start"></ion-icon>
-            Ver Historial
-          </ion-button>
-        </ng-container>
-
-      </div>
+          </div>
         </ion-card-content>
       </ion-card>
     </div>
@@ -391,11 +403,15 @@
   </ion-modal>
 
   <!-- MODAL EDITAR -->
+<!-- MODAL EDITAR / REPROGRAMAR -->
   <ion-modal #modalEdicion class="custom-modal">
     <ng-template>
       <ion-header class="ion-no-border">
         <ion-toolbar class="modal-toolbar">
-          <ion-title>Editar Actividad Programada</ion-title>
+          <!-- TÍTULO DINÁMICO DENTRO DEL MODAL -->
+          <ion-title>
+            {{ modoReprogramacionModal ? 'Reprogramar Actividad' : 'Editar Actividad Programada' }}
+          </ion-title>
           <ion-buttons slot="end">
             <ion-button (click)="modalEdicion.dismiss()">Cancelar</ion-button>
           </ion-buttons>
@@ -405,7 +421,8 @@
       <ion-content class="modal-content">
         <div class="formulario-modal">
 
-          <div class="upload-avatar-section">
+          <!-- 1. SECCIÓN DE IMAGEN: SOLO VISIBLE EN MODO EDICIÓN -->
+          <div class="upload-avatar-section" *ngIf="!modoReprogramacionModal">
             <div class="preview-uploader">
               <img 
                 [src]="formularioEdicion.img_actv || imgDefault" 
@@ -426,52 +443,70 @@
             <input #fileInputEdit type="file" (change)="seleccionarImagen($event, 'editar')" accept="image/*" hidden />
           </div>
 
+          <!-- 2. TARJETA INFORMATIVA: SOLO VISIBLE EN MODO REPROGRAMACIÓN -->
+          <div *ngIf="modoReprogramacionModal" class="ion-padding-bottom">
+            <ion-item lines="none" style="--background: #eef2ff; --color: #3730a3; border-radius: 8px;">
+              <ion-icon name="information-circle-outline" slot="start" color="primary"></ion-icon>
+              <ion-label class="ion-text-wrap">
+                <h2 style="font-weight: bold; margin-bottom: 2px;">{{ formularioEdicion.nombre_actividad }}</h2>
+                <p style="font-size: 0.85rem; color: #4338ca;">
+                  Ajusta la nueva fecha, los horarios, cupos y puntos requeridos para reprogramar la actividad.
+                </p>
+              </ion-label>
+            </ion-item>
+          </div>
+
           <ion-grid class="ion-no-padding">
             <ion-row>
-              <ion-col size="12">
-                <ion-item class="input-modal" lines="none">
-                  <ion-label position="stacked">Nombre de la Actividad *</ion-label>
-                  <ion-input [(ngModel)]="formularioEdicion.nombre_actividad"></ion-input>
-                </ion-item>
-              </ion-col>
 
-              <ion-col size="12">
-                <ion-item class="input-modal" lines="none">
-                  <ion-label position="stacked">Descripción</ion-label>
-                  <ion-textarea [(ngModel)]="formularioEdicion.descripcion" rows="3"></ion-textarea>
-                </ion-item>
-              </ion-col>
+              <!-- CAMPOS ADMINISTRATIVOS: SOLO VISIBLES EN MODO EDICIÓN NORMAL -->
+              <ng-container *ngIf="!modoReprogramacionModal">
+                <ion-col size="12">
+                  <ion-item class="input-modal" lines="none">
+                    <ion-label position="stacked">Nombre de la Actividad *</ion-label>
+                    <ion-input [(ngModel)]="formularioEdicion.nombre_actividad"></ion-input>
+                  </ion-item>
+                </ion-col>
 
-              <ion-col size="12" size-md="6">
-                <ion-item class="input-modal clickable-item" lines="none" (click)="abrirModalDocentes('editar')">
-                  <ion-label position="stacked">Responsable *</ion-label>
-                  <ion-input [(ngModel)]="formularioEdicion.responsable_actividad" readonly></ion-input>
-                  <ion-icon name="search-outline" slot="end" class="input-icon"></ion-icon>
-                </ion-item>
-              </ion-col>
+                <ion-col size="12">
+                  <ion-item class="input-modal" lines="none">
+                    <ion-label position="stacked">Descripción</ion-label>
+                    <ion-textarea [(ngModel)]="formularioEdicion.descripcion" rows="3"></ion-textarea>
+                  </ion-item>
+                </ion-col>
 
-              <ion-col size="12" size-md="6">
-                <ion-item class="input-modal" lines="none">
-                  <ion-label position="stacked">Tipo de Actividad *</ion-label>
-                  <ion-select [(ngModel)]="formularioEdicion.id_tipo_actividad">
-                    <ion-select-option *ngFor="let t of listaTipos" [value]="t.id_tipo_actividad">
-                      {{ t.descripcion }}
-                    </ion-select-option>
-                  </ion-select>
-                </ion-item>
-              </ion-col>
+                <ion-col size="12" size-md="6">
+                  <ion-item class="input-modal clickable-item" lines="none" (click)="abrirModalDocentes('editar')">
+                    <ion-label position="stacked">Responsable *</ion-label>
+                    <ion-input [(ngModel)]="formularioEdicion.responsable_actividad" readonly></ion-input>
+                    <ion-icon name="search-outline" slot="end" class="input-icon"></ion-icon>
+                  </ion-item>
+                </ion-col>
 
-              <ion-col size="12" size-md="6">
-                <ion-item class="input-modal" lines="none">
-                  <ion-label position="stacked">Sede *</ion-label>
-                  <ion-select [(ngModel)]="formularioEdicion.id_sede">
-                    <ion-select-option *ngFor="let s of listaSedes" [value]="s.id_sede">
-                      {{ s.descripcion }}
-                    </ion-select-option>
-                  </ion-select>
-                </ion-item>
-              </ion-col>
+                <ion-col size="12" size-md="6">
+                  <ion-item class="input-modal" lines="none">
+                    <ion-label position="stacked">Tipo de Actividad *</ion-label>
+                    <ion-select [(ngModel)]="formularioEdicion.id_tipo_actividad">
+                      <ion-select-option *ngFor="let t of listaTipos" [value]="t.id_tipo_actividad">
+                        {{ t.descripcion }}
+                      </ion-select-option>
+                    </ion-select>
+                  </ion-item>
+                </ion-col>
 
+                <ion-col size="12" size-md="6">
+                  <ion-item class="input-modal" lines="none">
+                    <ion-label position="stacked">Sede *</ion-label>
+                    <ion-select [(ngModel)]="formularioEdicion.id_sede">
+                      <ion-select-option *ngFor="let s of listaSedes" [value]="s.id_sede">
+                        {{ s.descripcion }}
+                      </ion-select-option>
+                    </ion-select>
+                  </ion-item>
+                </ion-col>
+              </ng-container>
+
+              <!-- CAMPOS EDITABLES DISPONIBLES AL REPROGRAMAR -->
               <ion-col size="12" size-md="4">
                 <ion-item class="input-modal" lines="none">
                   <ion-label position="stacked">Fecha *</ion-label>
@@ -507,25 +542,32 @@
                 </ion-item>
               </ion-col>
 
-              <ion-col size="12">
-                <ion-item class="input-modal" lines="none">
-                  <ion-label position="stacked">Lugar</ion-label>
-                  <ion-input [(ngModel)]="formularioEdicion.lugar"></ion-input>
-                </ion-item>
-              </ion-col>
+              <!-- CAMPOS SECUNDARIOS: SOLO VISIBLES EN MODO EDICIÓN NORMAL -->
+              <ng-container *ngIf="!modoReprogramacionModal">
+                <ion-col size="12">
+                  <ion-item class="input-modal" lines="none">
+                    <ion-label position="stacked">Lugar</ion-label>
+                    <ion-input [(ngModel)]="formularioEdicion.lugar"></ion-input>
+                  </ion-item>
+                </ion-col>
 
-              <ion-col size="12">
-                <ion-item class="input-modal" lines="none">
-                  <ion-label position="stacked">Requisito</ion-label>
-                  <ion-textarea [(ngModel)]="formularioEdicion.requisito" rows="2"></ion-textarea>
-                </ion-item>
-              </ion-col>
+                <ion-col size="12">
+                  <ion-item class="input-modal" lines="none">
+                    <ion-label position="stacked">Requisito</ion-label>
+                    <ion-textarea [(ngModel)]="formularioEdicion.requisito" rows="2"></ion-textarea>
+                  </ion-item>
+                </ion-col>
+              </ng-container>
+
             </ion-row>
           </ion-grid>
 
+          <!-- BOTÓN DE ACCIÓN DINÁMICO -->
           <ion-button expand="block" class="btn-guardar-modal" [disabled]="cargandoImagen" (click)="actualizarActividad(modalEdicion)">
             <ion-spinner *ngIf="cargandoImagen" name="crescent"></ion-spinner>
-            <span *ngIf="!cargandoImagen">Guardar Cambios</span>
+            <span *ngIf="!cargandoImagen">
+              {{ modoReprogramacionModal ? 'Reprogramar Actividad' : 'Guardar Cambios' }}
+            </span>
           </ion-button>
 
         </div>

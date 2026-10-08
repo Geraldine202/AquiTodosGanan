@@ -13,6 +13,11 @@ export interface EstudianteAsistencia {
   presente: boolean;
 }
 
+export interface ReprogramarActividadDTO {
+  fecha: string;        // Formato YYYY-MM-DD
+  hora_inicio: string;  // Formato HH:MM:SS
+  hora_termino: string; // Formato HH:MM:SS
+}
 /** Interfaz para un estudiante inscrito en una actividad (Resumen simple) */
 export interface EstudianteInscrito {
   rut: string;
@@ -383,18 +388,23 @@ cancelarSolicitudCanje(payload: { rut_alumno: string; id_premio: number }): Obse
   return this.http.post<any>(`${this.apiUrl}/solicitud-canje/cancelar`, payload);
 }
 
-// Iniciar actividad (Poner en curso)
 iniciarActividad(idActividad: number): Observable<any> {
-  return this.http.put(`${this.apiUrl}/actividades/${idActividad}/iniciar`, {});
-}
+    return this.http.put(`${this.apiUrl}/actividades/${idActividad}/iniciar`, {});
+  }
 
-// Terminar actividad (Finalizar y otorgar puntos)
-terminarActividad(idActividad: number): Observable<any> {
-  return this.http.put(`${this.apiUrl}/actividades/${idActividad}/terminar`, {});
-}
+  /** Detener / Finalizar actividad manualmente y liquidar puntos */
+  terminarActividad(idActividad: number): Observable<any> {
+    return this.http.put(`${this.apiUrl}/actividades/${idActividad}/terminar`, {});
+  }
 
-// Reprogramar actividad
-reprogramarActividad(idActividad: number, datos: { fecha: string; hora_inicio: string; hora_termino: string }): Observable<any> {
-  return this.http.put(`${this.apiUrl}/actividades/${idActividad}/reprogramar`, datos);
-}
+  /** Reprogramar actividad si finalizó sin inscritos */
+  reprogramarActividad(idActividad: number, datos: ReprogramarActividadDTO): Observable<any> {
+    return this.http.put(`${this.apiUrl}/actividades/${idActividad}/reprogramar`, datos);
+  }
+
+  /** Obtener lista detallada de alumnos inscritos en tiempo real */
+  obtenerInscritos(idActividad: number): Observable<any[]> {
+    return this.http.get<any[]>(`${this.apiUrl}/actividades/${idActividad}/inscritos`);
+  }
+
 }

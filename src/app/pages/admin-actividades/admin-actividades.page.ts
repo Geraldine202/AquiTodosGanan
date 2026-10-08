@@ -39,7 +39,7 @@ export class AdminActividadesPage implements OnInit {
   readonly imgDefault: string = '../../../assets/image_38683be5.png';
 
   modoFormulario: 'agregar' | 'editar' = 'agregar';
-  modoReprogramacionModal: boolean = false; // Flag para saber si usamos /reprogramar o actualización normal
+  modoReprogramacionModal: boolean = false;
   busquedaActividad: string = '';
   busquedaDocente: string = '';
   idActividadSeleccionada: number | null = null;
@@ -50,7 +50,7 @@ export class AdminActividadesPage implements OnInit {
 
   pestanaSeleccionada: 'vigentes' | 'finalizadas' = 'vigentes';
 
-  // Variables para gestión de asistencia
+  // Variables para gestión de asistencia e inscritos en tiempo real
   actividadSeleccionadaModal: any = null;
   listaEstudiantesInscritos: any[] = [];
   resumenInscritos: ResumenListaInscritos | null = null;
@@ -131,37 +131,34 @@ export class AdminActividadesPage implements OnInit {
   }
 
   cargarCatalogos() {
-    // 1. Cargar Sedes
     this.actividadService.getSedes().subscribe({
       next: (data: any) => {
         const sedesRaw = Array.isArray(data) ? data : (data?.data || []);
         this.listaSedes = sedesRaw.map((s: any) => ({
-          id_sede: Number(s.id_sede ?? s.id ?? s.id_sede_act ?? 1),
-          descripcion: s.descripcion || s.nombre_sede || s.nombre || 'Sede sin nombre'
+          id_sede: Number(s.id_sede ?? s.id ?? 1),
+          descripcion: s.descripcion || s.nombre_sede || 'Sede sin nombre'
         }));
       },
       error: (err) => console.error('Error al cargar sedes:', err)
     });
 
-    // 2. Cargar Tipos de Actividad
     this.actividadService.getTiposActividad().subscribe({
       next: (data: any) => {
         const tiposRaw = Array.isArray(data) ? data : (data?.data || []);
         this.listaTipos = tiposRaw.map((t: any) => ({
-          id_tipo_actividad: Number(t.id_tipo_actividad ?? t.id ?? t.id_tipo ?? 1),
-          descripcion: t.descripcion || t.nombre_tipo || t.nombre || 'Sin tipo'
+          id_tipo_actividad: Number(t.id_tipo_actividad ?? t.id ?? 1),
+          descripcion: t.descripcion || t.nombre_tipo || 'Sin tipo'
         }));
       },
       error: (err: any) => console.error('Error al cargar tipos:', err)
     });
 
-    // 3. Cargar Estados
     this.actividadService.getEstadosActividad().subscribe({
       next: (data: any) => {
         const estadosRaw = Array.isArray(data) ? data : (data?.data || []);
         this.listaEstados = estadosRaw.map((e: any) => ({
           id_estado_actividad: Number(e.id_estado_actividad ?? e.id ?? 1),
-          descripcion: e.descripcion || e.nombre_estado || 'Sin estado'
+          descripcion: e.descripcion || 'Sin estado'
         }));
       },
       error: (err: any) => console.error('Error al cargar estados:', err)
@@ -176,8 +173,8 @@ export class AdminActividadesPage implements OnInit {
         const docentesRaw = Array.isArray(dataDocentes) ? dataDocentes : (dataDocentes?.data || []);
         const docentesProcesados = docentesRaw.map((doc: any) => ({
           ...doc,
-          rut_usuario: doc.rut_usuario || doc.rut || doc.rut_docente || 'S/R',
-          nombre_completo: doc.nombre_completo || `${doc.p_nombre || doc.nombre || ''} ${doc.p_apellido || doc.apellido || ''}`.trim()
+          rut_usuario: doc.rut_usuario || doc.rut || 'S/R',
+          nombre_completo: doc.nombre_completo || `${doc.p_nombre || ''} ${doc.p_apellido || ''}`.trim()
         }));
 
         this.actividadService.getConsejeros().subscribe({
@@ -186,7 +183,7 @@ export class AdminActividadesPage implements OnInit {
             const consejerosProcesados = consejerosRaw.map((c: any) => ({
               ...c,
               rut_usuario: c.rut_usuario || c.rut || 'S/R',
-              nombre_completo: c.nombre_completo || `${c.p_nombre || c.nombre || ''} ${c.p_apellido || c.apellido || ''}`.trim()
+              nombre_completo: c.nombre_completo || `${c.p_nombre || ''} ${c.p_apellido || ''}`.trim()
             }));
 
             const mapaUsuarios = new Map();
@@ -215,88 +212,86 @@ export class AdminActividadesPage implements OnInit {
   }
 
   // =====================================================================
-  // EVALUADORES DE ESTADO Y CICLO DE VIDA
+  // EVALUADORES DE ESTADO Y REGLAS DE NEGOCIO
   // =====================================================================
 
+  /**
+   * Verifica si la actividad tiene alumnos inscritos activos
+   */
+tieneInscritos(act: any): boolean {
+  if (!act) return false;
+
+  // 1. Revisar si viene un conteo numérico explicito desde el backend
+  if (act.total_inscritos !== undefined && act.total_inscritos !== null) {
+    return Number(act.total_inscritos) > 0;
+  }
+  if (act.cant_inscritos !== undefined && act.cant_inscritos !== null) {
+    return Number(act.cant_inscritos) > 0;
+  }
+
+  // 2. Extraer cualquier propiedad posible donde Supabase o FastAPI devuelvan la lista
+  const inscritosRaw = 
+    act.inscripcion_act ?? 
+    act.inscripciones ?? 
+    act.inscripcion ?? 
+    act.inscritos ?? 
+    act.asistencia_act ?? 
+    [];
+
+  if (Array.isArray(inscritosRaw)) {
+    return inscritosRaw.length > 0;
+  } 
+  
+  if (typeof inscritosRaw === 'number') {
+    return inscritosRaw > 0;
+  }
+
+  return false;
+}
   esProgramada(act: any): boolean {
     if (!act) return false;
     const estadoId = Number(act?.id_estado_actividad ?? act?.estado_actividad?.id_estado_actividad ?? 1);
-    const desc = (act?.estado_actividad?.descripcion || '').toLowerCase();
-    return estadoId === 1 || desc === 'programada';
+    const desc = (act?.estado_actividad?.descripcion || act?.estado || '').toLowerCase();
+    
+    return estadoId === 1 || desc.includes('programada');
   }
 
   esEnCurso(act: any): boolean {
     if (!act) return false;
     const estadoId = Number(act.id_estado_actividad ?? act.estado_actividad?.id_estado_actividad ?? 1);
-    const desc = (act.estado_actividad?.descripcion || '').toLowerCase();
+    const desc = (act.estado_actividad?.descripcion || act.estado || '').toLowerCase();
 
-    // Prioridad a lo devuelto por el backend (2 = En Curso)
-    if (estadoId === 2 || desc === 'en curso') return true;
-
-    // Evaluación local de respaldo por rango horario
-    if (act.fecha && act.hora_inicio && act.hora_termino) {
-      const ahora = new Date();
-      const fechaBase = act.fecha.split('T')[0];
-      const inicio = new Date(`${fechaBase}T${act.hora_inicio}`);
-      const termino = new Date(`${fechaBase}T${act.hora_termino}`);
-      return ahora >= inicio && ahora <= termino;
-    }
-    return false;
+    return estadoId === 2 || desc.includes('en curso');
   }
 
   esFinalizada(act: any): boolean {
     if (!act) return false;
     const estadoId = Number(act.id_estado_actividad ?? act.estado_actividad?.id_estado_actividad ?? 1);
-    const desc = (act.estado_actividad?.descripcion || '').toLowerCase();
-    return estadoId === 3 || estadoId === 4 || desc === 'finalizada' || desc === 'cancelada';
+    const desc = (act.estado_actividad?.descripcion || act.estado || '').toLowerCase();
+    
+    return estadoId === 3 || estadoId === 4 || desc.includes('finalizad') || desc.includes('cancelad') || desc.includes('terminad');
   }
 
-  /**
-   * REGLA ESTRICTA:
-   * Solo se permite reprogramar si la actividad venció o finalizó Y TIENE EXACTAMENTE 0 INSCRITOS.
-   */
   puedeReprogramar(act: any): boolean {
-  if (!act || !act.fecha) return false;
+    if (!act) return false;
 
-  // 1. Extraer inscritos comprobando múltiples claves posibles
-  const inscritosRaw = act.inscripcion_act ?? act.inscripciones ?? act.inscripcion ?? act.asistencia_act ?? [];
-  let totalInscritos = 0;
+    if (act.puede_reprogramar !== undefined) {
+      return Boolean(act.puede_reprogramar);
+    }
 
-  if (Array.isArray(inscritosRaw)) {
-    totalInscritos = inscritosRaw.length;
-  } else if (typeof inscritosRaw === 'object' && inscritosRaw !== null) {
-    // Si Supabase devuelve un objeto de agregado con count
-    totalInscritos = Number(inscritosRaw.count ?? inscritosRaw.length ?? 0);
-  } else if (typeof inscritosRaw === 'number') {
-    totalInscritos = inscritosRaw;
+    if (this.tieneInscritos(act)) {
+      return false;
+    }
+
+    if (!act.fecha || !act.hora_termino) return false;
+    const fechaBase = act.fecha.split('T')[0];
+    const horaTermino = act.hora_termino.slice(0, 8);
+    const dtTermino = new Date(`${fechaBase}T${horaTermino}`);
+
+    const estaVencidaOFinalizada = new Date() >= dtTermino || this.esFinalizada(act);
+
+    return estaVencidaOFinalizada && !this.tieneInscritos(act);
   }
-
-  // 2. Comprobar contadores numéricos acumulados o metadatos de cupo
-  const cuposInscritos = Number(act.cupos_inscritos ?? act.total_inscritos ?? act.cant_inscritos ?? 0);
-  
-  // 3. Revisar si la relación de cupo contiene inscritos registrados
-  const cupoObj = Array.isArray(act.cupo_actividad) ? act.cupo_actividad[0] : act.cupo_actividad;
-  const inscritosEnCupo = Number(cupoObj?.cupos_ocupados ?? cupoObj?.inscritos ?? 0);
-
-  const hayInscritos = (totalInscritos > 0) || (cuposInscritos > 0) || (inscritosEnCupo > 0);
-
-  // REGLA: Si hay al menos 1 inscrito en cualquier estructura, PROHIBIR reprogramación
-  if (hayInscritos) {
-    return false;
-  }
-
-  // 4. Evaluar vencimiento por fecha y hora
-  const fechaBase = act.fecha.split('T')[0];
-  const horaTermino = act.hora_termino ? act.hora_termino.slice(0, 8) : '23:59:59';
-  const fechaTermino = new Date(`${fechaBase}T${horaTermino}`);
-  const ahora = new Date();
-
-  const esVencida = ahora > fechaTermino;
-  const esEstadoFinalizado = this.esFinalizada(act);
-
-  // Solo permite si está vencida/finalizada Y no tiene NINGÚN inscrito
-  return (esVencida || esEstadoFinalizado) && !hayInscritos;
-}
 
   private normalizarRut(rut: string | null | undefined): string {
     if (!rut) return '';
@@ -317,7 +312,6 @@ export class AdminActividadesPage implements OnInit {
       }
 
       const esFinal = this.esFinalizada(act);
-
       const coincidePestana = this.pestanaSeleccionada === 'vigentes' ? !esFinal : esFinal;
       const coincideBusqueda = !q || 
         (act.nombre_actividad && act.nombre_actividad.toLowerCase().includes(q)) ||
@@ -328,13 +322,13 @@ export class AdminActividadesPage implements OnInit {
   }
 
   // =====================================================================
-  // ACCIONES DE BOTONES: INICIAR, DETENER, REPROGRAMAR
+  // ACCIONES HTTP: INICIAR, TERMINAR, REPROGRAMAR
   // =====================================================================
 
   async iniciarActividadAdmin(act: any) {
     const alert = await this.alertController.create({
       header: 'Iniciar Actividad',
-      message: `¿Deseas poner en curso la actividad "${act.nombre_actividad}"? Esto habilitará la toma de asistencia de inmediato.`,
+      message: `¿Deseas poner en curso "${act.nombre_actividad}"? Se habilitará la toma de asistencia inmediata.`,
       buttons: [
         { text: 'Cancelar', role: 'cancel' },
         {
@@ -343,6 +337,10 @@ export class AdminActividadesPage implements OnInit {
             this.actividadService.iniciarActividad(act.id_actividad).subscribe({
               next: () => {
                 this.mostrarToast('Actividad puesta En Curso exitosamente', 'success');
+                act.id_estado_actividad = 2;
+                if (!act.estado_actividad) act.estado_actividad = {};
+                act.estado_actividad.descripcion = 'En Curso';
+                
                 this.cargarActividades();
               },
               error: (err) => {
@@ -360,7 +358,7 @@ export class AdminActividadesPage implements OnInit {
   async terminarActividadAdmin(act: any) {
     const alert = await this.alertController.create({
       header: 'Finalizar Actividad',
-      message: `¿Deseas finalizar "${act.nombre_actividad}"? Se distribuirán los puntos a los alumnos que registraron asistencia.`,
+      message: `¿Deseas finalizar "${act.nombre_actividad}"? Se liquidarán los puntos a los alumnos que registraron asistencia.`,
       buttons: [
         { text: 'Cancelar', role: 'cancel' },
         {
@@ -368,7 +366,11 @@ export class AdminActividadesPage implements OnInit {
           handler: () => {
             this.actividadService.terminarActividad(act.id_actividad).subscribe({
               next: () => {
-                this.mostrarToast('Actividad finalizada y puntos otorgados a los asistentes', 'success');
+                this.mostrarToast('Actividad finalizada y puntos liquidados', 'success');
+                act.id_estado_actividad = 3;
+                if (!act.estado_actividad) act.estado_actividad = {};
+                act.estado_actividad.descripcion = 'Finalizada';
+                
                 this.cargarActividades();
               },
               error: (err) => {
@@ -385,11 +387,11 @@ export class AdminActividadesPage implements OnInit {
 
   prepararReprogramacion(act: any, modal: IonModal) {
     this.prepararEdicion(act, modal, true);
-    this.mostrarToast('Modifique la fecha y hora para reprogramar la actividad.', 'warning');
+    this.mostrarToast('Ajuste la nueva fecha u horario para reprogramar la actividad.', 'warning');
   }
 
   // =====================================================================
-  // ASISTENCIA Y MODALES
+  // ASISTENCIA E INSCRITOS EN TIEMPO REAL
   // =====================================================================
 
   verDetallesEstudiantes(act: any, modal: IonModal) {
@@ -400,26 +402,44 @@ export class AdminActividadesPage implements OnInit {
     modal.present();
 
     this.actividadService.getEstudiantesInscritos(act.id_actividad).subscribe({
-      next: (res: ResumenListaInscritos) => {
+      next: (res: ResumenListaInscritos | any) => {
         this.cargandoInscritos = false;
-        this.resumenInscritos = res;
-        this.listaEstudiantesInscritos = (res.estudiantes || []).map(est => ({
-          ...est,
+        
+        const estudiantesRaw = res.estudiantes || [];
+        
+        this.listaEstudiantesInscritos = estudiantesRaw.map((est: any) => ({
+          rut: est.rut || est.rut_usuario || 'S/R',
+          rut_usuario: est.rut_usuario || est.rut || 'S/R',
+          nombre: est.nombre || est.nombre_completo || 'Estudiante',
+          nombre_completo: est.nombre_completo || est.nombre || 'Estudiante',
           asistio: Boolean(est.asistio)
         }));
+
+        this.resumenInscritos = {
+          id_actividad: act.id_actividad,
+          nombre_actividad: act.nombre_actividad || 'Actividad',
+          total_inscritos: res.total_inscritos ?? this.listaEstudiantesInscritos.length,
+          total_asistentes: res.total_asistentes ?? this.listaEstudiantesInscritos.filter(e => e.asistio).length,
+          estudiantes: [...this.listaEstudiantesInscritos]
+        };
       },
       error: (err: any) => {
         this.cargandoInscritos = false;
         console.error('Error al obtener lista de inscritos:', err);
-        this.mostrarToast('Error al cargar los estudiantes inscritos', 'danger');
+        this.mostrarToast('Error al cargar la lista de participantes', 'danger');
       }
     });
   }
 
   cambiarEstadoAsistencia(estudiante: any, estuvoPresente: boolean) {
     estudiante.asistio = estuvoPresente;
+    
     if (this.resumenInscritos) {
-      this.resumenInscritos.total_asistentes = this.listaEstudiantesInscritos.filter(e => e.asistio).length;
+      this.resumenInscritos = {
+        ...this.resumenInscritos,
+        total_asistentes: this.listaEstudiantesInscritos.filter(e => e.asistio).length,
+        estudiantes: [...this.listaEstudiantesInscritos]
+      };
     }
   }
 
@@ -427,31 +447,53 @@ export class AdminActividadesPage implements OnInit {
     if (!this.actividadSeleccionadaModal) return;
 
     if (!this.esEnCurso(this.actividadSeleccionadaModal)) {
-      this.mostrarToast('Solo se puede registrar la asistencia cuando la actividad esté en curso.', 'warning');
+      this.mostrarToast('La asistencia solo se puede registrar mientras la actividad esté En Curso.', 'warning');
+      return;
+    }
+
+    const estudiantesProcesados: EstudianteAsistencia[] = this.listaEstudiantesInscritos
+      .map(est => ({
+        rut_usuario: String(est.rut || est.rut_usuario || '').trim(),
+        presente: Boolean(est.asistio)
+      }))
+      .filter(est => est.rut_usuario !== '' && est.rut_usuario !== 'S/R');
+
+    if (estudiantesProcesados.length === 0) {
+      this.mostrarToast('No hay estudiantes con RUT válido para guardar.', 'warning');
       return;
     }
 
     this.cargandoAsistencia = true;
-    
-    const estudiantesPayload: EstudianteAsistencia[] = this.listaEstudiantesInscritos.map(est => ({
-      rut_usuario: est.rut || est.rut_usuario,
-      presente: Boolean(est.asistio)
-    }));
 
     this.actividadService.registrarAsistenciaMasiva(
       this.actividadSeleccionadaModal.id_actividad, 
-      estudiantesPayload
+      estudiantesProcesados
     ).subscribe({
-      next: () => {
+      next: (res: any) => {
         this.cargandoAsistencia = false;
-        this.mostrarToast('Asistencia guardada correctamente. Los puntos se sumarán al finalizar la actividad.', 'success');
-        if (this.modalDetalles) this.modalDetalles.dismiss();
+        const msg = res?.mensaje || 'Asistencia registrada correctamente.';
+        this.mostrarToast(msg, 'success');
+        
+        if (this.modalDetalles) {
+          this.modalDetalles.dismiss();
+        }
+        
         this.cargarActividades();
       },
       error: (err: any) => {
         this.cargandoAsistencia = false;
         console.error('Error guardando asistencia:', err);
-        this.mostrarToast('Error al registrar la asistencia', 'danger');
+        
+        let msg = 'Error al registrar la asistencia';
+        if (err.status === 422 && Array.isArray(err.error?.detail)) {
+          const campoErr = err.error.detail[0]?.loc?.join(' -> ') || 'Formato';
+          const msgErr = err.error.detail[0]?.msg || 'Inválido';
+          msg = `Error de validación (422): ${campoErr} -> ${msgErr}`;
+        } else if (err.error?.detail) {
+          msg = err.error.detail;
+        }
+        
+        this.mostrarToast(msg, 'danger');
       }
     });
   }
@@ -487,7 +529,7 @@ export class AdminActividadesPage implements OnInit {
     } else {
       this.formularioEdicion.img_actv = '';
     }
-    this.mostrarToast('Imagen quitada del formulario', 'warning');
+    this.mostrarToast('Imagen eliminada del formulario', 'warning');
   }
 
   abrirModalDocentes(modo: 'agregar' | 'editar') {
@@ -614,9 +656,22 @@ export class AdminActividadesPage implements OnInit {
     });
   }
 
-  prepararEdicion(act: any, modal: IonModal, esReprogramacion: boolean = false) {
+  async prepararEdicion(act: any, modal: IonModal, esReprogramacion: boolean = false) {
+    // 1. Si no es reprogramación y la actividad ya no está programada
     if (!esReprogramacion && !this.esProgramada(act)) {
       this.mostrarToast('Las actividades en curso o finalizadas no se pueden editar.', 'warning');
+      return;
+    }
+
+    // 2. RESTRICCIÓN DE EDICIÓN CON INSCRITOS:
+    // Si la actividad ya tiene inscritos y NO es una reprogramación, se bloquea la edición general
+    if (!esReprogramacion && this.tieneInscritos(act)) {
+      const alertBloqueo = await this.alertController.create({
+        header: 'Edición Denegada',
+        message: 'No puedes editar los datos de una actividad que ya cuenta con alumnos inscritos. Solo se permite Iniciar la actividad o gestionar su asistencia.',
+        buttons: ['Entendido']
+      });
+      await alertBloqueo.present();
       return;
     }
 
@@ -650,56 +705,80 @@ export class AdminActividadesPage implements OnInit {
     modal.present();
   }
 
-  actualizarActividad(modal: IonModal) {
-    if (!this.idActividadSeleccionada || this.cargandoGuardado) return;
+actualizarActividad(modal: IonModal) {
+  if (!this.idActividadSeleccionada || this.cargandoGuardado) return;
 
-    this.cargandoGuardado = true;
+  this.cargandoGuardado = true;
 
-    if (this.modoReprogramacionModal) {
-      // SI ES REPROGRAMACIÓN: RUTA ESPECÍFICA /reprogramar
-      const payloadReprogramar = {
-        fecha: this.formatearFecha(this.formularioEdicion.fecha),
-        hora_inicio: this.formatearHora(this.formularioEdicion.hora_inicio),
-        hora_termino: this.formatearHora(this.formularioEdicion.hora_termino)
-      };
+  // 1. Construimos el payload completo con todos los datos del formulario (cupos, puntos, lugar, etc.)
+  const payload = this.construirPayload(this.formularioEdicion);
 
-      this.actividadService.reprogramarActividad(this.idActividadSeleccionada, payloadReprogramar).subscribe({
-        next: () => {
-          this.cargandoGuardado = false;
-          this.mostrarToast('Actividad reprogramada exitosamente', 'success');
-          this.cargarActividades();
-          modal.dismiss();
-        },
-        error: (err: any) => {
-          this.cargandoGuardado = false;
-          console.error('Error al reprogramar:', err);
-          const msg = err.error?.detail || 'Error al reprogramar la actividad.';
-          this.mostrarToast(msg, 'danger');
-        }
-      });
+  if (this.modoReprogramacionModal) {
+    // Forzamos el estado a 1 (Programada) para que vuelva a estar vigente en el sistema
+    payload.id_estado_actividad = 1;
 
-    } else {
-      // SI ES EDICIÓN REGULAR DE ACTIVIDAD PROGRAMADA
-      const payload = this.construirPayload(this.formularioEdicion);
-      this.actividadService.actualizarActividad(this.idActividadSeleccionada, payload).subscribe({
-        next: () => {
-          this.cargandoGuardado = false;
-          this.mostrarToast('Actividad actualizada correctamente', 'success');
-          this.cargarActividades();
-          modal.dismiss();
-        },
-        error: (err: any) => {
-          this.cargandoGuardado = false;
-          console.error('Error al actualizar:', err);
-          const msg = err.error?.detail || 'Error al actualizar la actividad';
-          this.mostrarToast(msg, 'danger');
-        }
-      });
-    }
+    // Intentamos primero con reprogramarActividad pasando el payload completo
+    this.actividadService.reprogramarActividad(this.idActividadSeleccionada, payload).subscribe({
+      next: () => {
+        this.cargandoGuardado = false;
+        this.mostrarToast('Actividad reprogramada exitosamente', 'success');
+        this.cargarActividades();
+        modal.dismiss();
+      },
+      error: (err: any) => {
+        // Fallback: Si el endpoint /reprogramar espera solo horas o no existe, usamos actualizarActividad general
+        this.actividadService.actualizarActividad(this.idActividadSeleccionada!, payload).subscribe({
+          next: () => {
+            this.cargandoGuardado = false;
+            this.mostrarToast('Actividad reprogramada exitosamente', 'success');
+            this.cargarActividades();
+            modal.dismiss();
+          },
+          error: (errGen: any) => {
+            this.cargandoGuardado = false;
+            console.error('Error al reprogramar:', errGen);
+            const msg = errGen.error?.detail || err.error?.detail || 'Error al reprogramar la actividad.';
+            this.mostrarToast(msg, 'danger');
+          }
+        });
+      }
+    });
+
+  } else {
+    // Edición estándar de una actividad programada
+    this.actividadService.actualizarActividad(this.idActividadSeleccionada, payload).subscribe({
+      next: () => {
+        this.cargandoGuardado = false;
+        this.mostrarToast('Actividad actualizada correctamente', 'success');
+        this.cargarActividades();
+        modal.dismiss();
+      },
+      error: (err: any) => {
+        this.cargandoGuardado = false;
+        console.error('Error al actualizar:', err);
+        const msg = err.error?.detail || 'Error al actualizar la actividad';
+        this.mostrarToast(msg, 'danger');
+      }
+    });
   }
+}
 
   async confirmarEliminacion(act: any) {
-    const id = typeof act === 'number' ? act : act.id_actividad;
+    const actividadObj = typeof act === 'object' ? act : this.listaActividades.find(a => a.id_actividad === act);
+
+    // Validación de seguridad para impedir borrar actividades con inscritos
+    if (this.tieneInscritos(actividadObj)) {
+      const alertBloqueo = await this.alertController.create({
+        header: 'Acción Denegada',
+        message: 'No puedes eliminar esta actividad porque ya cuenta con alumnos inscritos.',
+        buttons: ['Entendido']
+      });
+      await alertBloqueo.present();
+      return;
+    }
+
+    const id = actividadObj ? actividadObj.id_actividad : act;
+
     const alert = await this.alertController.create({
       header: 'Confirmar Eliminación',
       message: '¿Está seguro de que desea eliminar esta actividad?',
@@ -716,6 +795,12 @@ export class AdminActividadesPage implements OnInit {
   }
 
   eliminarActividad(id: number) {
+    const act = this.listaActividades.find(a => a.id_actividad === id);
+    if (this.tieneInscritos(act)) {
+      this.mostrarToast('No es posible eliminar una actividad que ya posee inscripciones.', 'warning');
+      return;
+    }
+
     this.actividadService.eliminarActividad(id).subscribe({
       next: () => {
         this.mostrarToast('Actividad eliminada correctamente', 'success');
