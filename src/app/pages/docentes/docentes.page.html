@@ -1,0 +1,217 @@
+<app-header></app-header>
+
+<ion-content class="ion-padding">
+
+  <div class="page-header">
+    <h1>Gestión de Docentes</h1>
+    <ion-button id="open-modal-docente" color="primary">
+      <ion-icon slot="start" name="person-add-outline"></ion-icon>
+      Nuevo Docente
+    </ion-button>
+  </div>
+
+  <!-- BUSCADOR -->
+  <ion-searchbar 
+    [(ngModel)]="textoBuscar" 
+    (ionInput)="filtrarDocentes()" 
+    placeholder="Buscar por Nombre, RUT o Correo...">
+  </ion-searchbar>
+
+  <!-- CARGANDO -->
+  <div *ngIf="cargando" class="ion-text-center ion-padding">
+    <ion-spinner name="crescent"></ion-spinner>
+  </div>
+
+  <!-- LISTA DE DOCENTES -->
+  <ion-list *ngIf="!cargando && docentesFiltrados.length > 0">
+    <ion-item *ngFor="let docente of docentesFiltrados" [class.docente-inactivo]="docente.id_estado_matricula === 3">
+      
+      <!-- FOTO/AVATAR DEL DOCENTE -->
+      <ion-avatar slot="start">
+        <img *ngIf="docente.imagen" [src]="docente.imagen" alt="Foto docente" />
+        <ion-icon *ngIf="!docente.imagen" name="person-circle-outline" style="font-size: 40px;"></ion-icon>
+      </ion-avatar>
+
+      <ion-label>
+        <h2>
+          {{ docente.nombre_completo }}
+          <ion-badge [color]="docente.id_estado_matricula === 3 ? 'danger' : 'success'">
+            {{ docente.id_estado_matricula === 3 ? 'Retirado / Inactivo' : 'Activo' }}
+          </ion-badge>
+        </h2>
+        <p>RUT: {{ docente.rut_usuario }} | {{ docente.correo }}</p>
+        <p>Teléfono: {{ docente.telefono || 'Sin especificar' }} | Sede: {{ docente.sede?.descripcion || docente.nombre_sede || 'Asignada' }}</p>
+      </ion-label>
+
+      <ion-buttons slot="end">
+        <ion-button color="primary" fill="clear" (click)="prepararEdicion(docente)">
+          <ion-icon name="create-outline" slot="icon-only"></ion-icon>
+        </ion-button>
+
+        <ion-button 
+          *ngIf="docente.id_estado_matricula !== 3" 
+          color="warning" 
+          fill="clear" 
+          (click)="cambiarEstadoDocente(docente, 3)">
+          <ion-icon name="ban-outline" slot="icon-only"></ion-icon>
+        </ion-button>
+
+        <ion-button 
+          *ngIf="docente.id_estado_matricula === 3" 
+          color="success" 
+          fill="clear" 
+          (click)="cambiarEstadoDocente(docente, 1)">
+          <ion-icon name="checkmark-circle-outline" slot="icon-only"></ion-icon>
+        </ion-button>
+      </ion-buttons>
+    </ion-item>
+  </ion-list>
+
+  <div *ngIf="!cargando && docentesFiltrados.length === 0" class="ion-text-center ion-padding">
+    <p>No se encontraron docentes registrados.</p>
+  </div>
+
+  <!-- MODAL: REGISTRAR DOCENTE -->
+  <ion-modal #modalAgregar trigger="open-modal-docente">
+    <ng-template>
+      <ion-header>
+        <ion-toolbar color="primary">
+          <ion-title>Registrar Docente</ion-title>
+          <ion-buttons slot="end">
+            <ion-button (click)="modalAgregar.dismiss()">Cerrar</ion-button>
+          </ion-buttons>
+        </ion-toolbar>
+      </ion-header>
+
+      <ion-content class="ion-padding">
+        <form (ngSubmit)="agregarDocente()">
+          
+          <!-- SELECCIÓN DE FOTO -->
+          <ion-item lines="none" class="ion-text-center">
+            <ion-label position="stacked">Foto de Perfil (Opcional)</ion-label>
+            <div style="margin: 10px auto;">
+              <img *ngIf="imagenPreview" [src]="imagenPreview" style="width: 80px; height: 80px; border-radius: 50%; object-fit: cover;" />
+            </div>
+            <input type="file" (change)="onFileSelected($event)" accept="image/*" />
+          </ion-item>
+
+          <ion-item>
+            <ion-label position="stacked">Nombre Completo</ion-label>
+            <ion-input [(ngModel)]="nuevoDocente.nombre_completo" name="nombre_completo" placeholder="Ej: Roberto Gómez" required></ion-input>
+          </ion-item>
+
+          <ion-item>
+            <ion-label position="stacked">RUT Usuario</ion-label>
+            <ion-input [(ngModel)]="nuevoDocente.rut_usuario" name="rut_usuario" placeholder="12345678-9" required></ion-input>
+          </ion-item>
+
+          <ion-item>
+            <ion-label position="stacked">Correo Electrónico</ion-label>
+            <ion-input type="email" [(ngModel)]="nuevoDocente.correo" name="correo" placeholder="profesor@institucion.cl" required></ion-input>
+          </ion-item>
+
+          <ion-item>
+            <ion-label position="stacked">Teléfono Contacto</ion-label>
+            <ion-input type="tel" [(ngModel)]="nuevoDocente.telefono" name="telefono" placeholder="+56 9 1234 5678"></ion-input>
+          </ion-item>
+
+          <ion-item>
+            <ion-label position="stacked">Fecha de Nacimiento</ion-label>
+            <ion-input type="date" [(ngModel)]="nuevoDocente.fecha_nacimiento" name="fecha_nacimiento"></ion-input>
+          </ion-item>
+
+          <ion-item>
+            <ion-label position="stacked">Género</ion-label>
+            <ion-select [(ngModel)]="nuevoDocente.genero" name="genero" placeholder="Seleccione Género" required>
+              <ion-select-option value="Masculino">Masculino</ion-select-option>
+              <ion-select-option value="Femenino">Femenino</ion-select-option>
+              <ion-select-option value="Otro">Otro / Prefiero no decir</ion-select-option>
+            </ion-select>
+          </ion-item>
+
+          <ion-item>
+            <ion-label position="stacked">Sede Asignada</ion-label>
+            <ion-select [(ngModel)]="nuevoDocente.id_sede" name="id_sede" placeholder="Seleccione Sede" required>
+              <ion-select-option *ngFor="let s of sedes" [value]="s.id_sede">
+                {{ s.descripcion || s.nombre_sede }}
+              </ion-select-option>
+            </ion-select>
+          </ion-item>
+
+          <div class="ion-margin-top">
+            <ion-button expand="block" type="submit" color="primary">
+              Guardar y Enviar Credenciales
+            </ion-button>
+          </div>
+
+        </form>
+      </ion-content>
+    </ng-template>
+  </ion-modal>
+
+  <!-- MODAL: EDITAR DOCENTE -->
+  <ion-modal #modalEditar>
+    <ng-template>
+      <ion-header>
+        <ion-toolbar color="primary">
+          <ion-title>Editar Docente</ion-title>
+          <ion-buttons slot="end">
+            <ion-button (click)="modalEditar.dismiss()">Cerrar</ion-button>
+          </ion-buttons>
+        </ion-toolbar>
+      </ion-header>
+
+      <ion-content class="ion-padding" *ngIf="docenteSeleccionado">
+        <form (ngSubmit)="actualizarDocente()">
+          
+          <ion-item>
+            <ion-label position="stacked">RUT (No editable)</ion-label>
+            <ion-input [value]="docenteSeleccionado.rut_usuario" readonly></ion-input>
+          </ion-item>
+
+          <ion-item>
+            <ion-label position="stacked">Nombre Completo</ion-label>
+            <ion-input [(ngModel)]="docenteSeleccionado.nombre_completo" name="edit_nombre" required></ion-input>
+          </ion-item>
+
+          <ion-item>
+            <ion-label position="stacked">Correo Electrónico</ion-label>
+            <ion-input type="email" [(ngModel)]="docenteSeleccionado.correo" name="edit_correo" required></ion-input>
+          </ion-item>
+
+          <ion-item>
+            <ion-label position="stacked">Teléfono</ion-label>
+            <ion-input type="tel" [(ngModel)]="docenteSeleccionado.telefono" name="edit_telefono"></ion-input>
+          </ion-item>
+
+          <ion-item>
+            <ion-label position="stacked">Género</ion-label>
+            <ion-select [(ngModel)]="docenteSeleccionado.genero" name="edit_genero">
+              <ion-select-option value="Masculino">Masculino</ion-select-option>
+              <ion-select-option value="Femenino">Femenino</ion-select-option>
+              <ion-select-option value="Otro">Otro / Prefiero no decir</ion-select-option>
+            </ion-select>
+          </ion-item>
+
+          <ion-item>
+            <ion-label position="stacked">Sede Asignada</ion-label>
+            <ion-select [(ngModel)]="docenteSeleccionado.id_sede" name="edit_id_sede" required>
+              <ion-select-option *ngFor="let s of sedes" [value]="s.id_sede">
+                {{ s.descripcion || s.nombre_sede }}
+              </ion-select-option>
+            </ion-select>
+          </ion-item>
+
+          <div class="ion-margin-top">
+            <ion-button expand="block" type="submit" color="primary">
+              Guardar Cambios
+            </ion-button>
+          </div>
+
+        </form>
+      </ion-content>
+    </ng-template>
+  </ion-modal>
+
+  <app-footer></app-footer>
+</ion-content>

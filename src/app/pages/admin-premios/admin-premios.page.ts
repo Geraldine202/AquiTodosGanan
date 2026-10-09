@@ -24,6 +24,7 @@ export class AdminPremiosPage implements OnInit {
 
   premios: any[] = [];
   premiosFiltrados: any[] = [];
+  premiosStockBajo: any[] = []; // <-- NUEVA VARIABLE PARA ALERTAS DE STOCK BAJO
   categorias: any[] = [];
   sedes: any[] = [];
   docentes: any[] = [];
@@ -97,6 +98,7 @@ export class AdminPremiosPage implements OnInit {
     this.actividadService.getPremios().subscribe({
       next: (data) => {
         this.premios = data;
+        this.evaluarStockBajo(); // <-- IDENTIFICA LOS PREMIOS CON STOCK BAJO (<= 3)
         this.filtrarPremios();
         this.cargando = false;
       },
@@ -105,6 +107,13 @@ export class AdminPremiosPage implements OnInit {
         this.mostrarToast('Error al cargar la lista de premios', 'danger');
       }
     });
+  }
+
+  /**
+   * Filtra dinámicamente los premios cuyo stock sea <= 3
+   */
+  evaluarStockBajo() {
+    this.premiosStockBajo = (this.premios || []).filter(p => this.obtenerStock(p) <= 3);
   }
 
   filtrarPremios() {
@@ -137,49 +146,45 @@ export class AdminPremiosPage implements OnInit {
     return 0;
   }
 
-  /**
-   * Cambia la visibilidad directamente desde la tarjeta principal
-   */
-async cambiarVisibilidad(premio: any) {
-  if (premio.actualizandoVisibilidad) return;
+  async cambiarVisibilidad(premio: any) {
+    if (premio.actualizandoVisibilidad) return;
 
-  const estadoAnterior = premio.estado_visibilidad;
-  const nuevoEstado = !estadoAnterior;
+    const estadoAnterior = premio.estado_visibilidad;
+    const nuevoEstado = !estadoAnterior;
 
-  premio.actualizandoVisibilidad = true;
-  premio.estado_visibilidad = nuevoEstado;
+    premio.actualizandoVisibilidad = true;
+    premio.estado_visibilidad = nuevoEstado;
 
-  // Se remueve 'valor' de este objeto
-  const payload: Omit<PremioPayload, 'valor'> | any = {
-    descripcion: premio.descripcion,
-    id_categoria: Number(premio.id_categoria),
-    id_sede: Number(premio.id_sede),
-    puntos_requeridos: Number(premio.puntos_requeridos || 1),
-    stock: Number(this.obtenerStock(premio)),
-    rut_usuario: premio.rut_usuario || premio.usuario?.rut_usuario || '',
-    estado_visibilidad: nuevoEstado,
-    imagen: premio.imagen || ''
-  };
+    const payload: Omit<PremioPayload, 'valor'> | any = {
+      descripcion: premio.descripcion,
+      id_categoria: Number(premio.id_categoria),
+      id_sede: Number(premio.id_sede),
+      puntos_requeridos: Number(premio.puntos_requeridos || 1),
+      stock: Number(this.obtenerStock(premio)),
+      rut_usuario: premio.rut_usuario || premio.usuario?.rut_usuario || '',
+      estado_visibilidad: nuevoEstado,
+      imagen: premio.imagen || ''
+    };
 
-  try {
-    await firstValueFrom(
-      this.actividadService.actualizarPremio(premio.id_premio, payload)
-    );
+    try {
+      await firstValueFrom(
+        this.actividadService.actualizarPremio(premio.id_premio, payload)
+      );
 
-    const mensaje = nuevoEstado 
-      ? 'Premio visible para estudiantes' 
-      : 'Premio ocultado para estudiantes';
-    this.mostrarToast(mensaje, 'success');
+      const mensaje = nuevoEstado 
+        ? 'Premio visible para estudiantes' 
+        : 'Premio ocultado para estudiantes';
+      this.mostrarToast(mensaje, 'success');
 
-  } catch (err: any) {
-    premio.estado_visibilidad = estadoAnterior;
-    console.error('Error al cambiar visibilidad:', err);
-    const mensajeError = err.error?.detail || 'Error al cambiar la visibilidad';
-    this.mostrarToast(mensajeError, 'danger');
-  } finally {
-    premio.actualizandoVisibilidad = false;
+    } catch (err: any) {
+      premio.estado_visibilidad = estadoAnterior;
+      console.error('Error al cambiar visibilidad:', err);
+      const mensajeError = err.error?.detail || 'Error al cambiar la visibilidad';
+      this.mostrarToast(mensajeError, 'danger');
+    } finally {
+      premio.actualizandoVisibilidad = false;
+    }
   }
-}
 
   campoInvalido(campo: string): boolean {
     const control = this.premioForm.get(campo);

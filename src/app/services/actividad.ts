@@ -206,6 +206,17 @@ export interface SolicitudCanje {
     id_canje?: number;
   };
 }
+
+export interface PremioStockBajo {
+  cantidad: number;
+  premio: {
+    id_premio: number;
+    descripcion: string;
+  };
+  sede: {
+    descripcion: string;
+  };
+}
 @Injectable({
   providedIn: 'root',
 })
@@ -405,6 +416,9 @@ iniciarActividad(idActividad: number): Observable<any> {
   /** Obtener lista detallada de alumnos inscritos en tiempo real */
   obtenerInscritos(idActividad: number): Observable<any[]> {
     return this.http.get<any[]>(`${this.apiUrl}/actividades/${idActividad}/inscritos`);
+  }
+  obtenerPremiosStockBajo(limiteCritico: number = 3): Observable<PremioStockBajo[]> {
+    return this.http.get<PremioStockBajo[]>(`${this.apiUrl}/premios/stock-bajo?limite_critico=${limiteCritico}`);
   }
 
 }

@@ -41,6 +41,18 @@ const routes: Routes = [
   {
     path: 'reportes',
     loadChildren: () => import('./pages/reportes/reportes.module').then( m => m.ReportesPageModule)
+  },
+  {
+    path: 'perfil',
+    loadChildren: () => import('./pages/perfil/perfil.module').then( m => m.PerfilPageModule)
+  },
+  {
+    path: 'docentes',
+    loadChildren: () => import('./pages/docentes/docentes.module').then( m => m.DocentesPageModule)
+  },
+  {
+    path: 'cambiar-clave-obligatorio',
+    loadChildren: () => import('./pages/cambiar-clave-obligatorio/cambiar-clave-obligatorio.module').then( m => m.CambiarClaveObligatorioPageModule)
   }
 
 

@@ -50,7 +50,24 @@
             <ion-icon name="home-outline" slot="start" class="menu-icon"></ion-icon>
             <ion-label class="menu-label notranslate" translate="no">Inicio</ion-label>
           </ion-item>
-
+            <ion-item 
+            button
+            (click)="cerrarMenu()" 
+            routerLink="/perfil" 
+            routerLinkActive="menu-item-activo"
+            class="menu-item-custom">
+            <ion-icon name="bar-chart-outline" slot="start" class="menu-icon"></ion-icon>
+            <ion-label class="menu-label notranslate" translate="no">Perfil</ion-label>
+          </ion-item>
+            <ion-item 
+            button
+            (click)="cerrarMenu()" 
+            routerLink="/docentes" 
+            routerLinkActive="menu-item-activo"
+            class="menu-item-custom">
+            <ion-icon name="bar-chart-outline" slot="start" class="menu-icon"></ion-icon>
+            <ion-label class="menu-label notranslate" translate="no">Agregar Docente</ion-label>
+          </ion-item>
           <!-- Opción: Administrar Alumnos -->
           <ion-item 
             button
