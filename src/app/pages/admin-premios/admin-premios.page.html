@@ -3,7 +3,7 @@
 <ion-content class="ion-padding bg-light">
 
   <!-- ========================================== -->
-  <!-- BANNER DE ALERTA DE STOCK BAJO (NUEVO)     -->
+  <!-- BANNER DE ALERTA DE STOCK BAJO             -->
   <!-- ========================================== -->
   <ion-card color="warning" *ngIf="!cargando && premiosStockBajo.length > 0" class="ion-no-margin ion-margin-bottom shadow-sm border-rounded">
     <ion-card-header class="ion-padding-bottom">
@@ -18,7 +18,11 @@
           <ion-icon name="cube-outline" slot="start" color="danger"></ion-icon>
           <ion-label class="ion-text-wrap">
             <h2 style="font-weight: 600; color: #333;">{{ p.descripcion }}</h2>
-            <p>Sede: {{ p.sede?.descripcion || 'General' }} | Categoría: {{ p.categoria_premio?.descripcion || 'Sin categoría' }}</p>
+            <p>
+              Sede: {{ p.sede?.descripcion || 'General' }} | 
+              Categoría: {{ p.categoria_premio?.descripcion || 'Sin categoría' }} |
+              Nivel: {{ p.nivel?.nombre_nivel || 'Bronce' }}
+            </p>
           </ion-label>
 
           <ion-badge color="danger" slot="end" style="font-size: 0.85rem; padding: 6px 10px;">
@@ -43,7 +47,7 @@
         <!-- Búsqueda por Texto -->
         <ion-col size="12" size-md="5">
           <ion-searchbar
-            placeholder="Buscar por nombre o categoría..."
+            placeholder="Buscar por nombre, categoría o nivel..."
             [(ngModel)]="busquedaTexto"
             (ionInput)="filtrarPremios()"
             animated="true"
@@ -123,9 +127,17 @@
           </div>
 
           <ion-card-header>
-            <ion-card-subtitle color="primary" class="fw-bold text-uppercase">
-              {{ premio.categoria_premio?.descripcion || 'Sin Categoría' }}
-            </ion-card-subtitle>
+            <div class="ion-flex ion-justify-content-between ion-align-items-center">
+              <ion-card-subtitle color="primary" class="fw-bold text-uppercase">
+                {{ premio.categoria_premio?.descripcion || 'Sin Categoría' }}
+              </ion-card-subtitle>
+
+              <!-- BADGE DE NIVEL EN TARJETA -->
+              <ion-badge [color]="premio.id_nivel === 3 ? 'tertiary' : (premio.id_nivel === 2 ? 'warning' : 'medium')">
+                {{ premio.nivel?.nombre_nivel || 'Bronce' }}
+              </ion-badge>
+            </div>
+
             <ion-card-title class="premio-title">{{ premio.descripcion }}</ion-card-title>
           </ion-card-header>
 
@@ -133,6 +145,12 @@
             <div class="info-row">
               <ion-icon name="star-outline" color="warning"></ion-icon>
               <span><strong>Puntos requeridos:</strong> {{ premio.puntos_requeridos }} pts</span>
+            </div>
+
+            <!-- NIVEL REQUERIDO DETALLE -->
+            <div class="info-row">
+              <ion-icon name="ribbon-outline" color="tertiary"></ion-icon>
+              <span><strong>Nivel mínimo:</strong> {{ premio.nivel?.nombre_nivel || 'Bronce' }}</span>
             </div>
 
             <!-- STOCK EN SEDE CON INDICADOR VISUAL DE STOCK BAJO -->
@@ -242,15 +260,15 @@
             </ion-row>
           </div>
 
-          <!-- SECCIÓN 2: PARÁMETROS Y STOCK -->
+          <!-- SECCIÓN 2: PARÁMETROS, NIVELES Y STOCK -->
           <div class="form-section">
             <div class="section-header">
               <ion-icon name="calculator-outline" color="primary"></ion-icon>
-              <h4>Inventario y Puntaje</h4>
+              <h4>Inventario, Puntaje y Nivel</h4>
             </div>
 
             <ion-row>
-              <ion-col size="12" size-md="6">
+              <ion-col size="12" size-md="4">
                 <ion-item lines="outline" class="custom-input-item">
                   <ion-icon name="star-outline" slot="start" color="warning"></ion-icon>
                   <ion-label position="stacked">Puntos Requeridos <span class="text-danger">*</span></ion-label>
@@ -258,12 +276,28 @@
                 </ion-item>
               </ion-col>
 
-              <ion-col size="12" size-md="6">
+              <ion-col size="12" size-md="4">
                 <ion-item lines="outline" class="custom-input-item">
                   <ion-icon name="cube-outline" slot="start" color="secondary"></ion-icon>
                   <ion-label position="stacked">Stock Disponible <span class="text-danger">*</span></ion-label>
                   <ion-input type="number" formControlName="stock" min="0"></ion-input>
                 </ion-item>
+              </ion-col>
+
+              <!-- NUEVO SELECTOR DE NIVEL EN FORMULARIO -->
+              <ion-col size="12" size-md="4">
+                <ion-item lines="outline" class="custom-input-item">
+                  <ion-icon name="ribbon-outline" slot="start" color="tertiary"></ion-icon>
+                  <ion-label position="stacked">Nivel Requerido <span class="text-danger">*</span></ion-label>
+                  <ion-select formControlName="id_nivel" placeholder="Seleccione nivel">
+                    <ion-select-option *ngFor="let niv of niveles" [value]="niv.id_nivel">
+                      {{ niv.nombre_nivel }} ({{ niv.min_actividades }}+ act.)
+                    </ion-select-option>
+                  </ion-select>
+                </ion-item>
+                <ion-text color="danger" *ngIf="campoInvalido('id_nivel')">
+                  <p class="error-msg"><ion-icon name="alert-circle-outline"></ion-icon> Debe seleccionar un nivel.</p>
+                </ion-text>
               </ion-col>
             </ion-row>
           </div>

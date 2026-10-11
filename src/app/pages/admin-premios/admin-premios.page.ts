@@ -24,10 +24,11 @@ export class AdminPremiosPage implements OnInit {
 
   premios: any[] = [];
   premiosFiltrados: any[] = [];
-  premiosStockBajo: any[] = []; // <-- NUEVA VARIABLE PARA ALERTAS DE STOCK BAJO
+  premiosStockBajo: any[] = [];
   categorias: any[] = [];
   sedes: any[] = [];
   docentes: any[] = [];
+  niveles: any[] = []; // <-- NUEVO ARREGLO PARA NIVELES
 
   premioForm!: FormGroup;
   imagenPreview: string | null = null;
@@ -52,6 +53,7 @@ export class AdminPremiosPage implements OnInit {
       descripcion: ['', [Validators.required]],
       id_categoria: [null, [Validators.required]],
       id_sede: [null, [Validators.required]],
+      id_nivel: [1, [Validators.required]], // <-- NUEVO CAMPO CON NIVEL 1 (BRONCE) POR DEFECTO
       puntos_requeridos: [1, [Validators.required, Validators.min(1)]],
       stock: [0, [Validators.required, Validators.min(0)]],
       valor: [0, [Validators.min(0)]],
@@ -61,44 +63,76 @@ export class AdminPremiosPage implements OnInit {
     });
   }
 
-  cargarCatalogos() {
-    this.actividadService.getSedes().subscribe({
-      next: (data: any) => {
-        const sedesRaw = Array.isArray(data) ? data : (data?.data || []);
-        this.sedes = sedesRaw.map((s: any) => ({
-          id_sede: Number(s.id_sede ?? s.id ?? s.id_sede_act),
-          descripcion: s.descripcion || s.nombre_sede || s.nombre || 'Sede sin nombre'
-        }));
-      },
-      error: (err) => console.error('Error al cargar sedes:', err)
-    });
+cargarCatalogos() {
+  // Cargar Sedes
+  this.actividadService.getSedes().subscribe({
+    next: (data: any) => {
+      const sedesRaw = Array.isArray(data) ? data : (data?.data || []);
+      this.sedes = sedesRaw.map((s: any) => ({
+        id_sede: Number(s.id_sede ?? s.id ?? s.id_sede_act),
+        descripcion: s.descripcion || s.nombre_sede || s.nombre || 'Sede sin nombre'
+      }));
+    },
+    error: (err) => console.error('Error al cargar sedes:', err)
+  });
 
-    this.actividadService.getCategoriasPremio().subscribe({
-      next: (data: any) => {
-        this.categorias = Array.isArray(data) ? data : (data?.data || []);
-      },
-      error: (err) => console.error('Error al cargar categorías:', err)
-    });
+  // Cargar Categorías
+  this.actividadService.getCategoriasPremio().subscribe({
+    next: (data: any) => {
+      this.categorias = Array.isArray(data) ? data : (data?.data || []);
+    },
+    error: (err) => console.error('Error al cargar categorías:', err)
+  });
 
-    this.actividadService.getDocentes().subscribe({
-      next: (data: any) => {
-        const docentesRaw = Array.isArray(data) ? data : (data?.data || []);
-        this.docentes = docentesRaw.map((doc: any) => ({
-          ...doc,
-          rut_usuario: doc.rut_usuario || doc.rut || doc.rut_docente || 'S/R',
-          nombre_completo: doc.nombre_completo || `${doc.p_nombre || doc.nombre || ''} ${doc.p_apellido || doc.apellido || ''}`.trim()
+  // Cargar Niveles con mapeo seguro y respaldo
+  this.actividadService.getNiveles().subscribe({
+    next: (data: any) => {
+      const nivelesRaw = Array.isArray(data) ? data : (data?.data || []);
+      if (nivelesRaw.length > 0) {
+        this.niveles = nivelesRaw.map((n: any) => ({
+          id_nivel: Number(n.id_nivel),
+          nombre_nivel: n.nombre_nivel,
+          min_actividades: Number(n.min_actividades || 0)
         }));
-      },
-      error: (err) => console.error('Error al cargar docentes:', err)
-    });
-  }
+      } else {
+        this.usarNivelesPorDefecto();
+      }
+    },
+    error: (err) => {
+      console.error('Error al cargar niveles desde la API, usando respaldo:', err);
+      this.usarNivelesPorDefecto();
+    }
+  });
+
+  // Cargar Docentes
+  this.actividadService.getDocentes().subscribe({
+    next: (data: any) => {
+      const docentesRaw = Array.isArray(data) ? data : (data?.data || []);
+      this.docentes = docentesRaw.map((doc: any) => ({
+        ...doc,
+        rut_usuario: doc.rut_usuario || doc.rut || doc.rut_docente || 'S/R',
+        nombre_completo: doc.nombre_completo || `${doc.p_nombre || doc.nombre || ''} ${doc.p_apellido || doc.apellido || ''}`.trim()
+      }));
+    },
+    error: (err) => console.error('Error al cargar docentes:', err)
+  });
+}
+
+/** Método de respaldo para asegurar que el selector nunca quede vacío */
+private usarNivelesPorDefecto() {
+  this.niveles = [
+    { id_nivel: 1, nombre_nivel: 'Bronce', min_actividades: 0 },
+    { id_nivel: 2, nombre_nivel: 'Oro', min_actividades: 4 },
+    { id_nivel: 3, nombre_nivel: 'Platino', min_actividades: 7 }
+  ];
+}
 
   cargarPremios() {
     this.cargando = true;
     this.actividadService.getPremios().subscribe({
       next: (data) => {
         this.premios = data;
-        this.evaluarStockBajo(); // <-- IDENTIFICA LOS PREMIOS CON STOCK BAJO (<= 3)
+        this.evaluarStockBajo();
         this.filtrarPremios();
         this.cargando = false;
       },
@@ -109,9 +143,6 @@ export class AdminPremiosPage implements OnInit {
     });
   }
 
-  /**
-   * Filtra dinámicamente los premios cuyo stock sea <= 3
-   */
   evaluarStockBajo() {
     this.premiosStockBajo = (this.premios || []).filter(p => this.obtenerStock(p) <= 3);
   }
@@ -123,7 +154,8 @@ export class AdminPremiosPage implements OnInit {
       const texto = this.busquedaTexto.toLowerCase().trim();
       resultado = resultado.filter(p =>
         p.descripcion?.toLowerCase().includes(texto) ||
-        p.categoria_premio?.descripcion?.toLowerCase().includes(texto)
+        p.categoria_premio?.descripcion?.toLowerCase().includes(texto) ||
+        p.nivel?.nombre_nivel?.toLowerCase().includes(texto)
       );
     }
 
@@ -159,6 +191,7 @@ export class AdminPremiosPage implements OnInit {
       descripcion: premio.descripcion,
       id_categoria: Number(premio.id_categoria),
       id_sede: Number(premio.id_sede),
+      id_nivel: Number(premio.id_nivel || 1), // <-- CONSERVA O ASIGNA ID_NIVEL
       puntos_requeridos: Number(premio.puntos_requeridos || 1),
       stock: Number(this.obtenerStock(premio)),
       rut_usuario: premio.rut_usuario || premio.usuario?.rut_usuario || '',
@@ -215,6 +248,7 @@ export class AdminPremiosPage implements OnInit {
     this.imagenPreview = null;
     this.archivoImagen = null;
     this.premioForm.reset({
+      id_nivel: 1, // <-- DEFAULT: BRONCE
       puntos_requeridos: 1,
       stock: 0,
       valor: 0,
@@ -234,6 +268,7 @@ export class AdminPremiosPage implements OnInit {
       descripcion: premio.descripcion || '',
       id_categoria: premio.id_categoria || null,
       id_sede: premio.id_sede || null,
+      id_nivel: premio.id_nivel || 1, // <-- CARGA EL NIVEL ACTUAL O ASIGNA 1
       puntos_requeridos: premio.puntos_requeridos || 1,
       stock: this.obtenerStock(premio),
       valor: premio.valor || 0,
@@ -275,6 +310,7 @@ export class AdminPremiosPage implements OnInit {
         descripcion: formVal.descripcion.trim(),
         id_categoria: Number(formVal.id_categoria),
         id_sede: Number(formVal.id_sede),
+        id_nivel: Number(formVal.id_nivel || 1), // <-- INCLUYE ID_NIVEL EN EL PAYLOAD
         puntos_requeridos: Number(formVal.puntos_requeridos || 1),
         stock: Number(formVal.stock || 0),
         rut_usuario: formVal.rut_usuario,
