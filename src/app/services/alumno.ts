@@ -83,6 +83,9 @@ export class AlumnoService {
   getAlumnos(): Observable<any[]> {
     return this.http.get<any[]>(`${this.baseUrl}/alumnos`);
   }
+  getResponsablesActivos(): Observable<any[]> {
+  return this.http.get<any[]>(`${this.baseUrl}/responsables-activos`);
+}
 
   getAlumnoByRut(rut: string): Observable<any> {
     return this.http.get<any>(`${this.baseUrl}/alumnos/${rut}`);

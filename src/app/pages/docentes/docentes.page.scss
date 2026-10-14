@@ -1,0 +1,286 @@
+/* ========================================== */
+/* PALETA INSTITUCIONAL DUOC UC               */
+/* ========================================== */
+$duoc-blue: #001e36;
+$duoc-blue-dark: #001424;
+$duoc-yellow: #ffb800;
+$duoc-red: #ff4d4d;
+$duoc-green: #2dd36f;
+$bg-light: #f4f6f8;
+$card-border: #e2e8f0;
+$text-dark: #1e293b;
+$text-muted: #64748b;
+
+/* Variables globales aplicadas a nivel del componente */
+:host {
+  --ion-color-primary: #{$duoc-blue};
+  --ion-color-primary-rgb: 0, 30, 54;
+  --ion-color-primary-contrast: #ffffff;
+  --ion-color-primary-shade: #{$duoc-blue-dark};
+  --ion-color-primary-tint: #{lighten($duoc-blue, 10%)};
+}
+
+.bg-light {
+  --background: #{$bg-light};
+}
+
+/* Header & Toolbars */
+ion-header,
+ion-toolbar {
+  --background: #{$duoc-blue} !important;
+  --color: #ffffff !important;
+
+  ion-title {
+    color: #ffffff !important;
+    font-weight: 700;
+
+    ion-icon {
+      color: $duoc-yellow !important;
+    }
+  }
+
+  ion-buttons, ion-button {
+    --color: #ffffff !important;
+    color: #ffffff !important;
+  }
+}
+
+.modal-content-bg {
+  --background: #{$bg-light};
+}
+
+/* ========================================== */
+/* FILTRO Y BOTÓN PRINCIPAL                   */
+/* ========================================== */
+.filter-card {
+  background: #ffffff;
+  border-radius: 12px;
+  border: 1px solid $card-border;
+  box-shadow: 0 4px 12px rgba(0, 30, 54, 0.04);
+
+  .custom-searchbar {
+    --background: #f8fafc;
+    --border-radius: 10px;
+    --icon-color: #{$duoc-blue};
+    --placeholder-color: #{$text-muted};
+    --color: #{$text-dark};
+    padding: 0;
+  }
+}
+
+.btn-formal {
+  --background: #{$duoc-blue};
+  --background-hover: #{lighten($duoc-blue, 8%)};
+  --background-activated: #{$duoc-blue-dark};
+  --color: #ffffff;
+  --border-radius: 8px;
+  --box-shadow: 0 3px 8px rgba(0, 30, 54, 0.2);
+  font-weight: 600;
+}
+
+/* ========================================== */
+/* TARJETAS DE DOCENTES                       */
+/* ========================================== */
+.docente-card {
+  border-radius: 14px;
+  background: #ffffff;
+  border: 1px solid $card-border;
+  overflow: hidden;
+  box-shadow: 0 4px 14px rgba(0, 30, 54, 0.05);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+
+  &:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 22px rgba(0, 30, 54, 0.12);
+  }
+
+  &.docente-inactivo {
+    opacity: 0.7;
+    filter: grayscale(0.2);
+    border-color: $duoc-red;
+  }
+
+  .docente-profile-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+
+    .avatar-box {
+      width: 54px;
+      height: 54px;
+      border-radius: 50%;
+      overflow: hidden;
+      background-color: #f1f5f9;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: 2px solid $duoc-yellow;
+
+      img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+      }
+
+      ion-icon {
+        font-size: 3.2rem;
+        color: $duoc-blue;
+      }
+    }
+
+    .docente-title-box {
+      flex: 1;
+
+      .premio-title {
+        font-size: 1.05rem;
+        font-weight: 700;
+        color: $text-dark;
+        margin: 0;
+      }
+    }
+  }
+
+  .card-content-body {
+    .info-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 8px;
+      font-size: 0.88rem;
+      color: $text-muted;
+
+      ion-icon {
+        font-size: 1.1rem;
+        color: $duoc-blue;
+      }
+
+      strong {
+        color: $text-dark;
+      }
+    }
+
+    .actions-container {
+      display: flex;
+      gap: 8px;
+      margin-top: 14px;
+
+      ion-button {
+        flex: 1;
+        --border-radius: 8px;
+      }
+    }
+  }
+}
+
+/* ========================================== */
+/* FORMULARIOS Y MODALES                      */
+/* ========================================== */
+.form-section {
+  background: #ffffff;
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 16px;
+  border: 1px solid $card-border;
+
+  .section-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 14px;
+    border-bottom: 2px solid $duoc-yellow;
+    padding-bottom: 8px;
+
+    ion-icon {
+      font-size: 1.3rem;
+      color: $duoc-blue !important;
+    }
+
+    h4 {
+      margin: 0;
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: $duoc-blue;
+    }
+  }
+}
+
+.custom-input-item {
+  --background: #ffffff;
+  --border-color: #cbd5e1;
+  --border-radius: 8px;
+  --highlight-color-focused: #{$duoc-blue} !important;
+  --color-focused: #{$duoc-blue} !important;
+  margin-bottom: 12px;
+
+  ion-icon[slot="start"] {
+    color: $duoc-blue !important;
+  }
+
+  ion-label {
+    color: $text-dark;
+    font-weight: 600;
+  }
+}
+
+.preview-box-formal {
+  border: 2px dashed #94a3b8;
+  border-radius: 12px;
+  padding: 16px;
+  text-align: center;
+  background-color: #f8fafc;
+  cursor: pointer;
+  transition: all 0.2s ease;
+
+  &:hover {
+    border-color: $duoc-blue;
+    background-color: #f0f4f8;
+  }
+
+  img {
+    max-height: 120px;
+    width: 120px;
+    height: 120px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 3px solid $duoc-blue;
+  }
+
+  .placeholder-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    color: $text-muted;
+
+    ion-icon {
+      font-size: 2.5rem;
+      color: $duoc-blue !important;
+    }
+  }
+}
+
+.modal-footer-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 20px;
+}
+
+.empty-state {
+  padding: 40px 20px;
+
+  .empty-icon {
+    font-size: 4rem;
+    color: $duoc-blue !important;
+    margin-bottom: 12px;
+  }
+
+  h3 {
+    color: $text-dark;
+    font-weight: 600;
+  }
+}
+
+.text-danger {
+  color: $duoc-red;
+}

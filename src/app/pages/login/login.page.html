@@ -2,35 +2,44 @@
 
 <ion-content class="login-content ion-no-padding">
   <div class="login-container">
-    <div class="login-card">
+    <div class="login-card admin-card">
 
-      <!-- Logo de la Plataforma -->
+      <!-- Logo Institucional -->
       <div class="logo-box">
         <img src="assets/logo.png" alt="Logo Institucional" class="login-logo" />
       </div>
 
+      <!-- Distintivo Exclusivo de Administración -->
+      <div class="ion-text-center ion-margin-bottom">
+        <ion-badge color="primary" class="admin-badge">
+          <ion-icon name="shield-checkmark-outline"></ion-icon> Acceso Administrativo
+        </ion-badge>
+      </div>
+
       <!-- Encabezado de la Tarjeta -->
       <div class="login-header">
-        <h1>Bienvenid@</h1>
-        <p>Accede con tu cuenta</p>
+        <h1>Portal de Administración</h1>
+        <p>Inicia sesión con tu cuenta de Administrador</p>
       </div>
 
       <!-- Formulario de Entrada -->
       <div class="form-container">
+        
+        <!-- Campo Correo -->
         <ion-item class="input-item" lines="none">
-          <ion-icon name="person-outline" slot="start"></ion-icon>
+          <ion-icon name="mail-unread-outline" slot="start" color="primary"></ion-icon>
           <ion-input 
             type="email" 
-            placeholder="usuario@gmail.com" 
-            label="Correo" 
+            placeholder="correo@gmail.com" 
+            label="Correo Institucional" 
             labelPlacement="floating" 
             [(ngModel)]="credenciales.correo">
           </ion-input>
         </ion-item>
 
-        <!-- Campo de Contraseña con Ojito -->
+        <!-- Campo Contraseña con Ojito -->
         <ion-item class="input-item" lines="none">
-          <ion-icon name="lock-closed-outline" slot="start"></ion-icon>
+          <ion-icon name="lock-closed-outline" slot="start" color="primary"></ion-icon>
           <ion-input 
             [type]="mostrarPassword ? 'text' : 'password'" 
             placeholder="••••••••" 
@@ -46,15 +55,19 @@
           </ion-icon>
         </ion-item>
 
-        <ion-button expand="block" color="warning" class="btn-login-main" (click)="iniciarSesion()">
-          Ingresar
+        <!-- Botón Principal de Ingreso -->
+        <ion-button expand="block" color="primary" class="btn-login-main" (click)="iniciarSesion()">
+          <ion-icon slot="start" name="log-in-outline"></ion-icon>
+          Ingresar al Panel
         </ion-button>
 
+        <!-- Enlace de Recuperación -->
         <div class="login-footer-links">
           <ion-button fill="clear" routerLink="/recuperar" class="btn-forgot">
-            ¿Olvidaste tu contraseña?
+            ¿Olvidaste tu contraseña administrativa?
           </ion-button>
         </div>
+
       </div>
 
     </div>

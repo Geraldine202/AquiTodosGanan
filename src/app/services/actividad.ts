@@ -445,5 +445,9 @@ export class ActividadService {
   obtenerPremiosStockBajo(limiteCritico: number = 3): Observable<PremioStockBajo[]> {
     return this.http.get<PremioStockBajo[]>(`${this.apiUrl}/premios/stock-bajo?limite_critico=${limiteCritico}`);
   }
+getResponsablesActivos(): Observable<any[]> {
+  // Aseguramos el puerto 3000 que es donde está Express con la ruta /responsables-activos
+  return this.http.get<any[]>('http://localhost:3000/responsables-activos');
+}
 
 }

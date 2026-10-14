@@ -57,11 +57,11 @@
       </div>
     </div>
 
-    <!-- TARJETA DESPLEGABLE CON OJITO -->
+    <!-- TARJETA DESPLEGABLE CON REGLAS DE CONTRASEÑA -->
     <ion-card *ngIf="mostrarCambiarPassword" class="canje-card margin-bottom-card security-card">
       <ion-card-header>
         <ion-card-title>Nueva Contraseña</ion-card-title>
-        <ion-card-subtitle>Ingresa tu nueva clave de acceso para actualizarla</ion-card-subtitle>
+        <ion-card-subtitle>Ingresa tu nueva clave de acceso cumpliendo los requisitos de seguridad</ion-card-subtitle>
       </ion-card-header>
 
       <ion-card-content>
@@ -76,13 +76,45 @@
                 labelPlacement="stacked" 
                 [type]="verNuevaPassword ? 'text' : 'password'" 
                 [(ngModel)]="passwordForm.nueva_password" 
+                (ionInput)="validarPasswordEnVivo()"
                 name="nueva_password" 
-                placeholder="Mínimo 6 caracteres">
+                placeholder="Ej: Clave#2026">
               </ion-input>
               <ion-button fill="clear" slot="end" class="eye-btn" (click)="toggleVerNuevaPassword()" type="button">
                 <ion-icon slot="icon-only" [name]="verNuevaPassword ? 'eye-off-outline' : 'eye-outline'" color="medium"></ion-icon>
               </ion-button>
             </ion-item>
+
+            <!-- MENSAJE DE ERROR -->
+            <div class="ion-padding-start ion-padding-end" *ngIf="errorPassword">
+              <small class="text-danger" style="color: var(--ion-color-danger, #eb445a);">
+                <ion-icon name="alert-circle-outline"></ion-icon> {{ errorPassword }}
+              </small>
+            </div>
+
+            <!-- INDICADORES DINÁMICOS DE REQUISITOS -->
+            <div class="ion-padding-start ion-padding-top ion-padding-bottom" style="font-size: 0.85rem;">
+              <div [style.color]="requisitosPass.longitud ? '#2dd36f' : '#86888f'">
+                <ion-icon [name]="requisitosPass.longitud ? 'checkmark-circle' : 'ellipse-outline'"></ion-icon>
+                Mínimo 8 caracteres
+              </div>
+              <div [style.color]="requisitosPass.mayuscula ? '#2dd36f' : '#86888f'">
+                <ion-icon [name]="requisitosPass.mayuscula ? 'checkmark-circle' : 'ellipse-outline'"></ion-icon>
+                Al menos una letra MAYÚSCULA (A-Z)
+              </div>
+              <div [style.color]="requisitosPass.minuscula ? '#2dd36f' : '#86888f'">
+                <ion-icon [name]="requisitosPass.minuscula ? 'checkmark-circle' : 'ellipse-outline'"></ion-icon>
+                Al menos una letra minúscula (a-z)
+              </div>
+              <div [style.color]="requisitosPass.numero ? '#2dd36f' : '#86888f'">
+                <ion-icon [name]="requisitosPass.numero ? 'checkmark-circle' : 'ellipse-outline'"></ion-icon>
+                Al menos un número (0-9)
+              </div>
+              <div [style.color]="requisitosPass.especial ? '#2dd36f' : '#86888f'">
+                <ion-icon [name]="requisitosPass.especial ? 'checkmark-circle' : 'ellipse-outline'"></ion-icon>
+                Al menos un carácter especial (@, $, !, %, *, ?, &, #, ., -)
+              </div>
+            </div>
 
             <!-- CONFIRMAR CONTRASEÑA -->
             <ion-item class="info-item">
@@ -100,17 +132,27 @@
               </ion-button>
             </ion-item>
 
+            <!-- ERROR SI NO COINCIDEN -->
+            <div class="ion-padding-start ion-padding-end" *ngIf="passwordForm.confirmar_password && passwordForm.nueva_password !== passwordForm.confirmar_password">
+              <small class="text-danger" style="color: var(--ion-color-danger, #eb445a);">
+                <ion-icon name="close-circle-outline"></ion-icon> Las contraseñas no coinciden
+              </small>
+            </div>
+
           </ion-list>
 
-          <ion-button expand="block" type="submit" color="primary" class="save-btn ion-margin-top" [disabled]="cambiandoPassword">
+          <ion-button 
+            expand="block" 
+            type="submit" 
+            color="primary" 
+            class="save-btn ion-margin-top" 
+            [disabled]="cambiandoPassword || errorPassword !== '' || passwordForm.nueva_password !== passwordForm.confirmar_password">
             <ion-spinner *ngIf="cambiandoPassword" name="crescent"></ion-spinner>
             <span *ngIf="!cambiandoPassword">Guardar Nueva Contraseña</span>
           </ion-button>
         </form>
       </ion-card-content>
     </ion-card>
-
-
 
     <ion-list class="options-list">
       <ion-item button (click)="cerrarSesion()" detail="false" class="option-item logout-item">

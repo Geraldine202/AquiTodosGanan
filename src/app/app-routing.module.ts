@@ -10,7 +10,8 @@ const routes: Routes = [
   },
   {
     path: 'home',
-    loadChildren: () => import('./pages/home/home.module').then( m => m.HomePageModule)
+    loadChildren: () => import('./pages/home/home.module').then( m => m.HomePageModule),
+    canActivate: [authGuard]
   },
   {
     path: 'login',
@@ -34,25 +35,31 @@ const routes: Routes = [
     path: 'admin-premios',
     loadChildren: () => import('./pages/admin-premios/admin-premios.module').then( m => m.AdminPremiosPageModule),
     canActivate: [authGuard]
-  },  {
+  },
+  {
     path: 'admin-canjes',
-    loadChildren: () => import('./pages/admin-canjes/admin-canjes.module').then( m => m.AdminCanjesPageModule)
+    loadChildren: () => import('./pages/admin-canjes/admin-canjes.module').then( m => m.AdminCanjesPageModule),
+    canActivate: [authGuard]
   },
   {
     path: 'reportes',
-    loadChildren: () => import('./pages/reportes/reportes.module').then( m => m.ReportesPageModule)
+    loadChildren: () => import('./pages/reportes/reportes.module').then( m => m.ReportesPageModule),
+    canActivate: [authGuard]
   },
   {
     path: 'perfil',
-    loadChildren: () => import('./pages/perfil/perfil.module').then( m => m.PerfilPageModule)
+    loadChildren: () => import('./pages/perfil/perfil.module').then( m => m.PerfilPageModule),
+    canActivate: [authGuard]
   },
   {
     path: 'docentes',
-    loadChildren: () => import('./pages/docentes/docentes.module').then( m => m.DocentesPageModule)
+    loadChildren: () => import('./pages/docentes/docentes.module').then( m => m.DocentesPageModule),
+    canActivate: [authGuard]
   },
   {
     path: 'cambiar-clave-obligatorio',
-    loadChildren: () => import('./pages/cambiar-clave-obligatorio/cambiar-clave-obligatorio.module').then( m => m.CambiarClaveObligatorioPageModule)
+    loadChildren: () => import('./pages/cambiar-clave-obligatorio/cambiar-clave-obligatorio.module').then( m => m.CambiarClaveObligatorioPageModule),
+    canActivate: [authGuard]
   }
 
 

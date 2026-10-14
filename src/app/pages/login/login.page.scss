@@ -1,4 +1,4 @@
-/* ===== FONDO CON IMAGEN COMPLETA A LA IZQUIERDA ===== */
+/* ===== FONDO CON IMAGEN COMPLETA ===== */
 .login-content {
   --background: transparent;
   --overflow: hidden; /* Elimina la barra de desplazamiento vertical */
@@ -7,35 +7,58 @@
 .login-content::part(background) {
   background-image: url('../../../assets/image_38683be5.png');
   background-size: cover;
-  background-position: right center; /* Prioriza la vista izquierda de la imagen */
+  background-position: right center;
   background-repeat: no-repeat;
 }
 
-/* ===== CONTENEDOR AJUSTADO A LA DERECHA ===== */
+/* ===== CONTENEDOR AJUSTADO A LA IZQUIERDA/CENTRO ===== */
 .login-container {
   display: flex;
-  align-items: left; /* Alinea la tarjeta al lado izquierdo del contenedor */
-  justify-content: flex-start; /* Posiciona la tarjeta en el lado derecho */
+  align-items: center;
+  justify-content: flex-start;
   height: calc(100vh - 60px); /* Alto exacto visible descontando el header */
   width: 100%;
-  padding-right: 0%; /* Margen desde el borde derecho en pantallas grandes */
+  padding-left: 0%; /* Margen desde el borde izquierdo */
   box-sizing: border-box;
 
   @media (max-width: 767px) {
     justify-content: center;
     padding: 16px;
-    background: rgba(10, 25, 47, 0.4); /* Capa protectora para legibilidad en celulares */
+    background: rgba(10, 25, 47, 0.55); /* Capa protectora para legibilidad en celulares */
   }
 }
 
-/* ===== TARJETA FORMAL LIMPIA ===== */
+/* ===== BADGE DISTINTIVO ADMINISTRATIVO ===== */
+.admin-badge {
+  padding: 6px 14px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  border-radius: 20px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  text-transform: uppercase;
+  background: #001e36;
+  color: #ffffff;
+  box-shadow: 0 4px 10px rgba(0, 30, 54, 0.25);
+
+  ion-icon {
+    font-size: 1rem;
+    color: #3880ff;
+  }
+}
+
+/* ===== TARJETA FORMAL DE ADMINISTRACIÓN ===== */
 .login-card {
   width: 100%;
-  max-width: 500px;
+  max-width: 460px;
   background: #ffffff;
   padding: 34px 30px;
-  box-shadow: -10px 20px 40px rgba(0, 0, 0, 0.22);
-  border: 1px solid #e2e8f0;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.25);
+  border: 1px solid #cbd5e1;
+  border-top: 4px solid #001e36; /* Detalle superior formal */
+  border-radius: 12px;
   text-align: center;
   margin: 0;
 
@@ -43,10 +66,10 @@
     display: flex;
     justify-content: center;
     align-items: center;
-    margin-bottom: 10px;
+    margin-bottom: 8px;
 
     .login-logo {
-      max-height: 100px;
+      max-height: 90px;
       width: auto;
       object-fit: contain;
     }
@@ -89,13 +112,13 @@
 
     &:focus-within {
       border-color: #001e36;
-      box-shadow: 0 0 0 3px rgba(0, 30, 54, 0.1);
+      box-shadow: 0 0 0 3px rgba(0, 30, 54, 0.12);
       --background: #ffffff;
     }
 
     ion-icon {
-      color: #475569;
-      font-size: 1.1rem;
+      color: #001e36;
+      font-size: 1.15rem;
       margin-top: 12px;
     }
 
@@ -108,28 +131,28 @@
 
     .icon-ojo {
       color: #64748b;
-      font-size: 1.1rem;
+      font-size: 1.15rem;
       cursor: pointer;
       margin-top: 12px;
       z-index: 10;
       transition: color 0.2s ease;
 
       &:hover {
-        color: #0f172a;
+        color: #001e36;
       }
     }
   }
 
   .btn-login-main {
     --border-radius: 10px;
-    --padding-top: 12px;
-    --padding-bottom: 12px;
+    --padding-top: 14px;
+    --padding-bottom: 14px;
     --background: #001e36;
     --color: #ffffff;
     font-weight: 600;
     font-size: 0.95rem;
-    margin-top: 6px;
-    box-shadow: 0 4px 12px rgba(0, 30, 54, 0.2);
+    margin-top: 8px;
+    box-shadow: 0 4px 14px rgba(0, 30, 54, 0.25);
     transition: all 0.2s ease;
 
     &:hover {
@@ -138,7 +161,7 @@
   }
 
   .login-footer-links {
-    margin-top: 12px;
+    margin-top: 10px;
 
     .btn-forgot {
       --color: #64748b;
@@ -159,7 +182,7 @@ ion-toolbar {
 }
 
 .toolbar-institucional {
-  --background: rgba(10, 25, 47, 0.85);
+  --background: rgba(10, 25, 47, 0.9);
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
   --color: white;

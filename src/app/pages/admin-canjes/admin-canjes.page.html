@@ -33,11 +33,11 @@
     <ion-refresher-content></ion-refresher-content>
   </ion-refresher>
 
-  <!-- Spinner de Carga -->
-  <div class="ion-text-center ion-padding" *ngIf="cargando">
-    <ion-spinner name="crescent" color="primary"></ion-spinner>
-    <p class="text-muted">Cargando solicitudes de canje...</p>
-  </div>
+<!-- Spinner de Carga Inicial -->
+    <div class="ion-text-center ion-padding" *ngIf="cargando && solicitudes.length === 0">
+      <ion-spinner name="crescent" color="primary"></ion-spinner>
+      <p class="text-muted">Cargando solicitudes de canje...</p>
+    </div>
 
   <!-- Estado Vacío -->
   <div class="ion-text-center ion-padding empty-state" *ngIf="!cargando && solicitudesFiltradas.length === 0">
@@ -196,11 +196,6 @@
           <ion-button expand="block" color="primary" size="small" (click)="marcarComoRetirado(item)">
             <ion-icon name="gift-outline" slot="start"></ion-icon>
             Entregar Premio
-          </ion-button>
-        </ion-col>
-        <ion-col size="4">
-          <ion-button expand="block" color="danger" fill="outline" size="small" (click)="cancelarPorStock(item)">
-            Cancelar
           </ion-button>
         </ion-col>
       </ng-container>

@@ -68,8 +68,8 @@
           </ion-card>
         </ion-col>
 
-        <!-- Tabla: public.solicitud_canje (id_estado_canje = Pendiente) -->
-        <ion-col size="6" size-md="3">
+        <!-- Tabla: public.solicitud_canje (id_estado_canje = Pendiente) - Hace click directo -->
+        <ion-col size="6" size-md="3" routerLink="/reportes" style="cursor: pointer;">
           <ion-card class="kpi-card color-purple">
             <ion-card-content>
               <div class="kpi-header">
@@ -159,28 +159,37 @@
     <div class="recent-section">
       <ion-card class="recent-card">
         <ion-card-header>
-          <ion-card-title>
-            <ion-icon name="time-outline"></ion-icon> Solicitudes de Canje Recientes
-          </ion-card-title>
+          <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+            <ion-card-title style="font-size: 1.1rem; font-weight: 600;">
+              <ion-icon name="time-outline" style="vertical-align: middle; margin-right: 6px;"></ion-icon>
+              Solicitudes de Canje Recientes
+            </ion-card-title>
+
+            <!-- BOTÓN DIRECTO A LA PÁGINA DE SOLICITUDES -->
+            <ion-button fill="solid" size="small" color="primary" routerLink="/admin-canjes">
+              Ver Todas las Solicitudes
+              <ion-icon name="arrow-forward-outline" slot="end"></ion-icon>
+            </ion-button>
+          </div>
         </ion-card-header>
+
         <ion-card-content>
           <ion-list lines="full">
-          <!-- Se agregó "let" antes de item -->
-           <ion-item *ngFor="let item of solicitudesRecientes">
-          <ion-icon name="cart-outline" slot="start" color="primary"></ion-icon>
-          <ion-label>
-         <h2>RUT: {{ item.rut_usuario }} — Premio ID: {{ item.id_premio }}</h2>
-          <p>Costo: {{ item.costo_puntaje }} pts • Fecha: {{ item.fecha_solicitud | date:'short' }}</p>
-        </ion-label>
-       <ion-badge slot="end" color="warning">Pendiente</ion-badge>
-      </ion-item>
+            <ion-item *ngFor="let item of solicitudesRecientes">
+              <ion-icon name="cart-outline" slot="start" color="primary"></ion-icon>
+              <ion-label>
+                <h2>RUT: {{ item.rut_usuario }} — Premio ID: {{ item.id_premio }}</h2>
+                <p>Costo: {{ item.costo_puntaje }} pts • Fecha: {{ item.fecha_solicitud | date:'short' }}</p>
+              </ion-label>
+              <ion-badge slot="end" color="warning">Pendiente</ion-badge>
+            </ion-item>
 
-  <ion-item *ngIf="solicitudesRecientes.length === 0">
-    <ion-label class="ion-text-center">
-      <p>No hay solicitudes de canje pendientes por revisar.</p>
-    </ion-label>
-  </ion-item>
-</ion-list>
+            <ion-item *ngIf="solicitudesRecientes.length === 0">
+              <ion-label class="ion-text-center">
+                <p>No hay solicitudes de canje pendientes por revisar.</p>
+              </ion-label>
+            </ion-item>
+          </ion-list>
         </ion-card-content>
       </ion-card>
     </div>

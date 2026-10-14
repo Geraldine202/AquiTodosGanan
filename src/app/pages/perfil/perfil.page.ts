@@ -15,7 +15,7 @@ export class PerfilPage implements OnInit {
   usuario: any = null;
   cargando: boolean = true;
 
-  // Variables para el cambio de contraseña (exactamente iguales)
+  // Variables para el cambio de contraseña
   mostrarCambiarPassword: boolean = false;
   cambiandoPassword: boolean = false;
   
@@ -25,6 +25,16 @@ export class PerfilPage implements OnInit {
   passwordForm = {
     nueva_password: '',
     confirmar_password: ''
+  };
+
+  // Errores e indicadores visuales de requisitos
+  errorPassword: string = '';
+  requisitosPass = {
+    longitud: false,
+    mayuscula: false,
+    minuscula: false,
+    numero: false,
+    especial: false
   };
 
   constructor(
@@ -64,57 +74,58 @@ export class PerfilPage implements OnInit {
   /**
    * Carga los datos del perfil utilizando getAlumnoByRut
    */
-  cargarPerfil() {
-    this.cargando = true;
+cargarPerfil() {
+  this.cargando = true;
 
-    const sessionData = localStorage.getItem('usuarioLogueado') || 
-                        localStorage.getItem('usuario') || 
-                        localStorage.getItem('user') ||
-                        sessionStorage.getItem('usuarioLogueado');
+  const sessionData = localStorage.getItem('usuarioLogueado') || 
+                      sessionStorage.getItem('usuarioLogueado');
 
-    if (sessionData) {
-      try {
-        let objetoLocal: any = null;
-
-        if (typeof sessionData === 'string' && sessionData.trim().startsWith('{')) {
-          objetoLocal = JSON.parse(sessionData);
-          this.usuario = this.normalizarUsuario(objetoLocal);
-        }
-
-        const rut = this.usuario?.rut_usuario || objetoLocal?.rut || objetoLocal?.rut_usuario;
-
-        if (rut) {
-          this.alumnoService.getAlumnoByRut(rut).subscribe({
-            next: (res: any) => {
-              const alumnoBD = res?.data || res?.alumno || res;
-
-              if (alumnoBD) {
-                this.usuario = this.normalizarUsuario({ ...this.usuario, ...alumnoBD });
-                localStorage.setItem('usuarioLogueado', JSON.stringify(this.usuario));
-              }
-              this.cargando = false;
-              this.cdRef.detectChanges();
-            },
-            error: (err: any) => {
-              console.warn('Error al obtener usuario por RUT desde la API:', err);
-              this.cargando = false;
-              this.cdRef.detectChanges();
-            }
-          });
-        } else {
-          this.cargando = false;
-        }
-      } catch (e) {
-        console.error('Error parseando datos de sesión local:', e);
-        this.cargando = false;
-      }
-    } else {
-      this.router.navigate(['/login']);
-    }
+  if (!sessionData) {
+    this.router.navigate(['/login']);
+    return;
   }
 
+  try {
+    const usuarioSesion = JSON.parse(sessionData);
+    this.usuario = this.normalizarUsuario(usuarioSesion);
+
+    const tipoUser = Number(this.usuario?.id_tipo_usuario);
+    const esEstudiante = tipoUser === 1; // Solo ID 1 es Estudiante
+
+    const rutReal = this.usuario?.rut_usuario;
+
+    // Solo si es Estudiante (1) busca datos adicionales en la API de alumnos
+    if (esEstudiante && rutReal) {
+      this.alumnoService.getAlumnoByRut(rutReal).subscribe({
+        next: (res: any) => {
+          const alumnoBD = res?.data || res?.alumno || res;
+          if (alumnoBD) {
+            this.usuario = this.normalizarUsuario({ ...this.usuario, ...alumnoBD });
+            localStorage.setItem('usuarioLogueado', JSON.stringify(this.usuario));
+          }
+          this.cargando = false;
+          this.cdRef.detectChanges();
+        },
+        error: (err: any) => {
+          console.warn('Error al cargar datos del alumno:', err);
+          this.cargando = false;
+          this.cdRef.detectChanges();
+        }
+      });
+    } else {
+      // Para Administrador (2), Docente (3) y Consejero (4), usa la sesión activa
+      this.cargando = false;
+      this.cdRef.detectChanges();
+    }
+  } catch (e) {
+    console.error('Error parseando sesión:', e);
+    this.cargando = false;
+    this.router.navigate(['/login']);
+  }
+}
+
   /**
-   * Métodos idénticos para alternar la visibilidad de los campos (ojito)
+   * Métodos para alternar la visibilidad de los campos (ojito)
    */
   toggleVerNuevaPassword() {
     this.verNuevaPassword = !this.verNuevaPassword;
@@ -125,7 +136,45 @@ export class PerfilPage implements OnInit {
   }
 
   /**
-   * Método de cambio de contraseña idéntico al perfil de alumnos
+   * Evalúa la contraseña en tiempo real mientras el usuario escribe
+   */
+  validarPasswordEnVivo() {
+    const pass = this.passwordForm.nueva_password || '';
+
+    // Evaluar cada regla de seguridad (incluyendo Mayúscula y Minúscula)
+    this.requisitosPass.longitud = pass.length >= 8;
+    this.requisitosPass.mayuscula = /[A-Z]/.test(pass);
+    this.requisitosPass.minuscula = /[a-z]/.test(pass);
+    this.requisitosPass.numero = /\d/.test(pass);
+    this.requisitosPass.especial = /[@$!%*?&#.\-_/*+]/.test(pass);
+
+    if (!pass) {
+      this.errorPassword = '';
+      return;
+    }
+
+    if (!this.requisitosPass.longitud || !this.requisitosPass.mayuscula || !this.requisitosPass.minuscula || !this.requisitosPass.numero || !this.requisitosPass.especial) {
+      this.errorPassword = 'La contraseña no cumple con los requisitos mínimos de seguridad.';
+    } else {
+      this.errorPassword = '';
+    }
+  }
+
+  /**
+   * Valida completamente la contraseña antes de hacer el envío
+   */
+  private esPasswordValida(pass: string): boolean {
+    if (!pass || pass.length < 8) return false;
+    const tieneMayuscula = /[A-Z]/.test(pass);
+    const tieneMinuscula = /[a-z]/.test(pass);
+    const tieneNumero = /\d/.test(pass);
+    const tieneEspecial = /[@$!%*?&#.\-_/*+]/.test(pass);
+
+    return tieneMayuscula && tieneMinuscula && tieneNumero && tieneEspecial;
+  }
+
+  /**
+   * Método de cambio de contraseña con validación fuerte
    */
   cambiarPassword() {
     const rut = this.usuario?.rut_usuario;
@@ -141,13 +190,15 @@ export class PerfilPage implements OnInit {
       return;
     }
 
-    if (nueva_password !== confirmar_password) {
-      this.mostrarToast('Las contraseñas no coinciden', 'warning');
+    // 1. Validación de reglas de seguridad
+    if (!this.esPasswordValida(nueva_password)) {
+      this.mostrarToast('La contraseña debe tener mínimo 8 caracteres, al menos una mayúscula, una minúscula, un número y un carácter especial.', 'danger');
       return;
     }
 
-    if (nueva_password.length < 6) {
-      this.mostrarToast('La contraseña debe tener al menos 6 caracteres', 'warning');
+    // 2. Coincidencia de contraseñas
+    if (nueva_password !== confirmar_password) {
+      this.mostrarToast('Las contraseñas no coinciden', 'warning');
       return;
     }
 
@@ -159,22 +210,28 @@ export class PerfilPage implements OnInit {
         this.mostrarToast(res.mensaje || 'Contraseña actualizada con éxito', 'success');
         
         // Limpiar formulario, ojitos y cerrar sección
-        this.passwordForm = {
-          nueva_password: '',
-          confirmar_password: ''
-        };
-        this.verNuevaPassword = false;
-        this.verConfirmarPassword = false;
-        this.mostrarCambiarPassword = false;
+        this.resetPasswordForm();
         this.cdRef.detectChanges();
       },
       error: (err: any) => {
         this.cambiandoPassword = false;
-        const msg = err.error?.error || 'Error al cambiar la contraseña';
+        const msg = err.error?.error || err.error?.message || 'Error al cambiar la contraseña';
         this.mostrarToast(msg, 'danger');
         this.cdRef.detectChanges();
       }
     });
+  }
+
+  resetPasswordForm() {
+    this.passwordForm = {
+      nueva_password: '',
+      confirmar_password: ''
+    };
+    this.verNuevaPassword = false;
+    this.verConfirmarPassword = false;
+    this.mostrarCambiarPassword = false;
+    this.errorPassword = '';
+    this.requisitosPass = { longitud: false, mayuscula: false, minuscula: false, numero: false, especial: false };
   }
 
   async mostrarToast(mensaje: string, color: string) {

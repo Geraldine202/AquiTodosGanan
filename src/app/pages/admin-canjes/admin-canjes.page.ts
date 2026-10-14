@@ -1,5 +1,5 @@
-import { Component, OnInit } from '@angular/core';
-import { AlertController, ToastController, LoadingController } from '@ionic/angular';
+import { Component, OnInit, OnDestroy } from '@angular/core';
+import { AlertController, ToastController, LoadingController, ViewWillEnter, ViewWillLeave } from '@ionic/angular';
 import { ActividadService, SolicitudCanje } from 'src/app/services/actividad';
 
 @Component({
@@ -8,13 +8,15 @@ import { ActividadService, SolicitudCanje } from 'src/app/services/actividad';
   styleUrls: ['./admin-canjes.page.scss'],
   standalone: false
 })
-export class AdminCanjesPage implements OnInit {
+export class AdminCanjesPage implements OnInit, OnDestroy, ViewWillEnter, ViewWillLeave {
   solicitudes: SolicitudCanje[] = [];
   solicitudesFiltradas: SolicitudCanje[] = [];
   
   filtroEstado: string = 'todos';
   busqueda: string = '';
   cargando: boolean = false;
+
+  private autoRefreshInterval: any = null;
 
   constructor(
     private actividadService: ActividadService,
@@ -23,103 +25,141 @@ export class AdminCanjesPage implements OnInit {
     private loadingController: LoadingController
   ) {}
 
-  ngOnInit() {
-    this.cargarSolicitudes();
-  }
+  ngOnInit() { }
 
+  /**
+   * Ciclo de vida Ionic: Se ejecuta automáticamente cada vez que se entra a la vista.
+   */
   ionViewWillEnter() {
     this.cargarSolicitudes();
+    this.iniciarAutoRefresh();
   }
 
-cargarSolicitudes(event?: any) {
-  this.cargando = true;
-  this.actividadService.obtenerCanjes().subscribe({
-    next: (data: any[]) => {
-      this.solicitudes = data.map(item => {
-        // 1. Obtener la información del Usuario
-        const usr = Array.isArray(item.usuario) ? item.usuario[0] : item.usuario;
-        const idSedeUsuario = usr?.id_sede ? Number(usr.id_sede) : null;
+  /**
+   * Ciclo de vida Ionic: Detiene la recarga automática cuando el usuario cambia de pantalla.
+   */
+  ionViewWillLeave() {
+    this.detenerAutoRefresh();
+  }
 
-        // Nombre de la sede del usuario
-        let nombreSedeUsuario = '';
-        if (usr?.sede) {
-          const sObj = Array.isArray(usr.sede) ? usr.sede[0] : usr.sede;
-          nombreSedeUsuario = sObj?.descripcion || '';
-        }
+  ngOnDestroy() {
+    this.detenerAutoRefresh();
+  }
 
-        // 2. Obtener la información del Nivel del Estudiante
-        const infoNivelAlumno = item.info_nivel_usuario || {
-          id_nivel: 1,
-          nombre_nivel: 'Bronce',
-          total_actividades: 0,
-          faltantes_siguiente: 4
-        };
+  /**
+   * Inicia la actualización automática silenciosa cada 15 segundos.
+   */
+  private iniciarAutoRefresh() {
+    this.detenerAutoRefresh();
+    this.autoRefreshInterval = setInterval(() => {
+      this.cargarSolicitudes(null, true);
+    }, 15000);
+  }
 
-        // 3. Obtener la información del Premio, su Nivel, Categoría y Stock
-        const premioObj = Array.isArray(item.premio) ? item.premio[0] : item.premio;
-        
-        // Extracción del objeto Nivel del premio
-        const nivelObj = Array.isArray(premioObj?.nivel) ? premioObj.nivel[0] : premioObj?.nivel;
-        const idNivelPremio = premioObj?.id_nivel ? Number(premioObj.id_nivel) : (nivelObj?.id_nivel ? Number(nivelObj.id_nivel) : 1);
-        const nombreNivelPremio = nivelObj?.nombre_nivel || (idNivelPremio === 3 ? 'Platino' : (idNivelPremio === 2 ? 'Oro' : 'Bronce'));
-
-        // Extracción del objeto Categoría del premio
-        const catObj = Array.isArray(premioObj?.categoria_premio) ? premioObj.categoria_premio[0] : premioObj?.categoria_premio;
-
-        // Procesamiento de Stock por Sede
-        let stocks: any[] = premioObj?.stock_sede || [];
-        if (stocks && !Array.isArray(stocks)) {
-          stocks = [stocks];
-        }
-
-        // 4. Buscar el stock real correspondiente a la sede del alumno
-        let stockEncontrado = 0;
-
-        if (Array.isArray(stocks) && stocks.length > 0) {
-          let registro = stocks.find((s: any) => Number(s.id_sede) === idSedeUsuario);
-
-          if (!registro && premioObj?.id_sede && Number(premioObj.id_sede) === idSedeUsuario) {
-            registro = stocks.find((s: any) => Number(s.id_sede) === Number(premioObj.id_sede));
-          }
-
-          if (!registro && stocks.length === 1) {
-            registro = stocks[0];
-          }
-
-          if (registro) {
-            stockEncontrado = Number(registro.cantidad);
-          }
-        }
-
-        return {
-          ...item,
-          usuario: usr,
-          info_nivel_usuario: infoNivelAlumno,
-          premio: {
-            ...premioObj,
-            id_nivel: idNivelPremio,
-            nombre_nivel: nombreNivelPremio,
-            nivel: nivelObj || { id_nivel: idNivelPremio, nombre_nivel: nombreNivelPremio, min_actividades: 0 },
-            categoria_premio: catObj
-          },
-          nombre_sede_alumno: nombreSedeUsuario || 'Puente Alto',
-          stock_sede_alumno: stockEncontrado
-        };
-      });
-
-      this.aplicarFiltros();
-      this.cargando = false;
-      if (event) event.target.complete();
-    },
-    error: (err) => {
-      console.error('[ERROR CARGAR CANJES]:', err);
-      const msg = err.error?.detail || 'Error al cargar las solicitudes de canje';
-      this.mostrarToast(msg, 'danger');
-      this.cargando = false;
-      if (event) event.target.complete();
+  /**
+   * Limpia el temporizador para no consumir recursos en segundo plano.
+   */
+  private detenerAutoRefresh() {
+    if (this.autoRefreshInterval) {
+      clearInterval(this.autoRefreshInterval);
+      this.autoRefreshInterval = null;
     }
-  });
-}
+  }
+
+  cargarSolicitudes(event?: any, esSilencioso: boolean = false) {
+    if (!esSilencioso && !event && this.solicitudes.length === 0) {
+      this.cargando = true;
+    }
+
+    this.actividadService.obtenerCanjes().subscribe({
+      next: (data: any[]) => {
+        this.solicitudes = (data || []).map(item => {
+          // 1. Obtener la información del Usuario
+          const usr = Array.isArray(item.usuario) ? item.usuario[0] : item.usuario;
+          const idSedeUsuario = usr?.id_sede ? Number(usr.id_sede) : null;
+
+          // Nombre de la sede del usuario
+          let nombreSedeUsuario = '';
+          if (usr?.sede) {
+            const sObj = Array.isArray(usr.sede) ? usr.sede[0] : usr.sede;
+            nombreSedeUsuario = sObj?.descripcion || '';
+          }
+
+          // 2. Obtener la información del Nivel del Estudiante
+          const infoNivelAlumno = item.info_nivel_usuario || {
+            id_nivel: 1,
+            nombre_nivel: 'Bronce',
+            total_actividades: 0,
+            faltantes_siguiente: 4
+          };
+
+          // 3. Obtener la información del Premio, su Nivel, Categoría y Stock
+          const premioObj = Array.isArray(item.premio) ? item.premio[0] : item.premio;
+          
+          // Extracción del objeto Nivel del premio
+          const nivelObj = Array.isArray(premioObj?.nivel) ? premioObj.nivel[0] : premioObj?.nivel;
+          const idNivelPremio = premioObj?.id_nivel ? Number(premioObj.id_nivel) : (nivelObj?.id_nivel ? Number(nivelObj.id_nivel) : 1);
+          const nombreNivelPremio = nivelObj?.nombre_nivel || (idNivelPremio === 3 ? 'Platino' : (idNivelPremio === 2 ? 'Oro' : 'Bronce'));
+
+          // Extracción del objeto Categoría del premio
+          const catObj = Array.isArray(premioObj?.categoria_premio) ? premioObj.categoria_premio[0] : premioObj?.categoria_premio;
+
+          // Procesamiento de Stock por Sede
+          let stocks: any[] = premioObj?.stock_sede || [];
+          if (stocks && !Array.isArray(stocks)) {
+            stocks = [stocks];
+          }
+
+          // 4. Buscar el stock real correspondiente a la sede del alumno
+          let stockEncontrado = 0;
+
+          if (Array.isArray(stocks) && stocks.length > 0) {
+            let registro = stocks.find((s: any) => Number(s.id_sede) === idSedeUsuario);
+
+            if (!registro && premioObj?.id_sede && Number(premioObj.id_sede) === idSedeUsuario) {
+              registro = stocks.find((s: any) => Number(s.id_sede) === Number(premioObj.id_sede));
+            }
+
+            if (!registro && stocks.length === 1) {
+              registro = stocks[0];
+            }
+
+            if (registro) {
+              stockEncontrado = Number(registro.cantidad);
+            }
+          }
+
+          return {
+            ...item,
+            usuario: usr,
+            info_nivel_usuario: infoNivelAlumno,
+            premio: {
+              ...premioObj,
+              id_nivel: idNivelPremio,
+              nombre_nivel: nombreNivelPremio,
+              nivel: nivelObj || { id_nivel: idNivelPremio, nombre_nivel: nombreNivelPremio, min_actividades: 0 },
+              categoria_premio: catObj
+            },
+            nombre_sede_alumno: nombreSedeUsuario || 'Puente Alto',
+            stock_sede_alumno: stockEncontrado
+          };
+        });
+
+        this.aplicarFiltros();
+        this.cargando = false;
+        if (event) event.target.complete();
+      },
+      error: (err) => {
+        console.error('[ERROR CARGAR CANJES]:', err);
+        if (!esSilencioso) {
+          const msg = err.error?.detail || 'Error al cargar las solicitudes de canje';
+          this.mostrarToast(msg, 'danger');
+        }
+        this.cargando = false;
+        if (event) event.target.complete();
+      }
+    });
+  }
 
   aplicarFiltros() {
     this.solicitudesFiltradas = this.solicitudes.filter(item => {
@@ -153,7 +193,9 @@ cargarSolicitudes(event?: any) {
           text: 'Sí, Aprobar',
           handler: () => {
             this.ejecutarAccion(
-              this.actividadService.aprobarCanje(item.id_canje)
+              this.actividadService.aprobarCanje(item.id_canje),
+              item,
+              2 // Estado Aprobado
             );
           }
         }
@@ -173,7 +215,9 @@ cargarSolicitudes(event?: any) {
           text: 'Confirmar Entrega',
           handler: () => {
             this.ejecutarAccion(
-              this.actividadService.marcarComoRetirado(item.id_canje)
+              this.actividadService.marcarComoRetirado(item.id_canje),
+              item,
+              3 // Estado Retirado
             );
           }
         }
@@ -200,7 +244,9 @@ cargarSolicitudes(event?: any) {
           role: 'destructive',
           handler: () => {
             this.ejecutarAccion(
-              this.actividadService.cancelarPorStock(item.id_canje)
+              this.actividadService.cancelarPorStock(item.id_canje),
+              item,
+              4 // Estado Cancelado / Rechazado
             );
           }
         }
@@ -209,15 +255,38 @@ cargarSolicitudes(event?: any) {
     await alert.present();
   }
 
-  private async ejecutarAccion(peticion$: any) {
+  /**
+   * Ejecuta la petición al servidor e impacta la lista LOCAL al instante
+   * para evitar latencias de renderizado.
+   */
+  private async ejecutarAccion(peticion$: any, itemAfectado: SolicitudCanje, nuevoEstadoId: number) {
     const loader = await this.loadingController.create({ message: 'Procesando...' });
     await loader.present();
 
     peticion$.subscribe({
       next: (res: any) => {
         loader.dismiss();
+        
+        // 1. Actualización local instantánea
+        itemAfectado.id_estado_canje = nuevoEstadoId;
+
+        // Descontar stock localmente si pasa a aprobado
+        if (nuevoEstadoId === 2 && itemAfectado.stock_sede_alumno !== undefined && itemAfectado.stock_sede_alumno > 0) {
+          itemAfectado.stock_sede_alumno -= 1;
+        }
+
+        // Reincorporar stock localmente si se cancela una aprobada
+        if (nuevoEstadoId === 4 && itemAfectado.stock_sede_alumno !== undefined) {
+          itemAfectado.stock_sede_alumno += 1;
+        }
+
+        // 2. Refrescar filtros para que desaparezca o cambie de estado inmediatamente
+        this.aplicarFiltros();
+        
         this.mostrarToast(res.message || 'Operación realizada con éxito', 'success');
-        this.cargarSolicitudes();
+
+        // 3. Re-sincronizar de fondo sin bloquear al usuario
+        this.cargarSolicitudes(null, true);
       },
       error: (err: any) => {
         loader.dismiss();

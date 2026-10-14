@@ -27,11 +27,43 @@
             <ion-input 
               [type]="mostrarNuevaClave ? 'text' : 'password'" 
               [(ngModel)]="datosClave.nuevaPassword" 
+              (ionInput)="validarPasswordEnVivo()"
               placeholder="Ingresa tu nueva contraseña">
             </ion-input>
             <ion-button fill="clear" class="btn-eye" (click)="toggleNuevaClave()">
               <ion-icon slot="icon-only" [name]="mostrarNuevaClave ? 'eye-off-outline' : 'eye-outline'"></ion-icon>
             </ion-button>
+          </div>
+        </div>
+
+        <!-- Mensaje de error si la clave no cumple las reglas -->
+        <div class="ion-text-start ion-margin-top" *ngIf="errorPassword">
+          <small style="color: var(--ion-color-danger, #eb445a); font-size: 0.8rem;">
+            <ion-icon name="alert-circle-outline" style="vertical-align: middle;"></ion-icon> {{ errorPassword }}
+          </small>
+        </div>
+
+        <!-- Lista dinámica de Requisitos de Seguridad -->
+        <div class="ion-text-start ion-margin-top ion-margin-bottom" style="font-size: 0.82rem; line-height: 1.6;">
+          <div [style.color]="requisitosPass.longitud ? '#2dd36f' : '#86888f'">
+            <ion-icon [name]="requisitosPass.longitud ? 'checkmark-circle' : 'ellipse-outline'"></ion-icon>
+            Mínimo 8 caracteres
+          </div>
+          <div [style.color]="requisitosPass.mayuscula ? '#2dd36f' : '#86888f'">
+            <ion-icon [name]="requisitosPass.mayuscula ? 'checkmark-circle' : 'ellipse-outline'"></ion-icon>
+            Al menos una letra MAYÚSCULA (A-Z)
+          </div>
+          <div [style.color]="requisitosPass.minuscula ? '#2dd36f' : '#86888f'">
+            <ion-icon [name]="requisitosPass.minuscula ? 'checkmark-circle' : 'ellipse-outline'"></ion-icon>
+            Al menos una letra minúscula (a-z)
+          </div>
+          <div [style.color]="requisitosPass.numero ? '#2dd36f' : '#86888f'">
+            <ion-icon [name]="requisitosPass.numero ? 'checkmark-circle' : 'ellipse-outline'"></ion-icon>
+            Al menos un número (0-9)
+          </div>
+          <div [style.color]="requisitosPass.especial ? '#2dd36f' : '#86888f'">
+            <ion-icon [name]="requisitosPass.especial ? 'checkmark-circle' : 'ellipse-outline'"></ion-icon>
+            Al menos un carácter especial (@, $, !, %, *, ?, &, #, ., -)
           </div>
         </div>
 
@@ -51,11 +83,19 @@
           </div>
         </div>
 
+        <!-- Mensaje de error de no coincidencia -->
+        <div class="ion-text-start ion-margin-top" *ngIf="datosClave.confirmarPassword && datosClave.nuevaPassword !== datosClave.confirmarPassword">
+          <small style="color: var(--ion-color-danger, #eb445a); font-size: 0.8rem;">
+            <ion-icon name="close-circle-outline" style="vertical-align: middle;"></ion-icon> Las contraseñas no coinciden
+          </small>
+        </div>
+
         <!-- Botón de Guardar -->
         <ion-button 
           expand="block" 
           shape="round" 
           class="submit-btn ion-margin-top" 
+          [disabled]="errorPassword !== '' || datosClave.nuevaPassword !== datosClave.confirmarPassword || !datosClave.nuevaPassword"
           (click)="guardarNuevaClave()">
           GUARDAR Y CONTINUAR
           <ion-icon name="chevron-forward-outline" slot="end"></ion-icon>

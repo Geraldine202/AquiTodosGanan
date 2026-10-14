@@ -1,7 +1,7 @@
 import { Component, OnInit, ViewChild } from '@angular/core';
 import { AlumnoService, HistorialPayload } from 'src/app/services/alumno'; 
 import { ActividadService } from 'src/app/services/actividad';
-import { AlertController, ToastController, IonModal } from '@ionic/angular';
+import { AlertController, ToastController, IonModal, ViewWillEnter } from '@ionic/angular';
 import { firstValueFrom } from 'rxjs';
 
 @Component({
@@ -10,7 +10,7 @@ import { firstValueFrom } from 'rxjs';
   styleUrls: ['./admin-alumnos.page.scss'],
   standalone: false
 })
-export class AdminAlumnosPage implements OnInit {
+export class AdminAlumnosPage implements OnInit, ViewWillEnter {
   @ViewChild('modalEditar1') modalEditar1!: IonModal;
   @ViewChild('modalAgregar') modalAgregar!: IonModal;
 
@@ -71,10 +71,145 @@ export class AdminAlumnosPage implements OnInit {
     private toastController: ToastController
   ) { }
 
-  ngOnInit() { 
+  ngOnInit() { }
+
+  /**
+   * Ciclo de vida de Ionic: Se ejecuta automáticamente cada vez que se entra a la página (evita usar F5)
+   */
+  ionViewWillEnter() {
     this.obtenerAlumnos(); 
     this.obtenerCatalogos();
   }
+
+  // ==========================================
+  // MÉTODOS DE VALIDACIÓN Y FORMATEO
+  // ==========================================
+
+  /**
+   * Formatea un RUT dinámicamente con puntos y guión a medida que el usuario escribe
+   */
+  private formatearRutChile(rut: string): string {
+    if (!rut) return '';
+    const limpio = rut.replace(/[^0-9kK]/g, '').toUpperCase();
+    if (limpio.length === 0) return '';
+    if (limpio.length === 1) return limpio;
+
+    const cuerpo = limpio.slice(0, -1);
+    const dv = limpio.slice(-1);
+    const cuerpoFormateado = Number(cuerpo).toLocaleString('es-CL');
+
+    return `${cuerpoFormateado}-${dv}`;
+  }
+
+  /**
+   * Valida un RUT chileno usando el Algoritmo Módulo 11
+   */
+/**
+ * Evento input para formatear el RUT en vivo en el formulario
+ * Limita el ingreso a un máximo de 9 caracteres (8 cuerpo + 1 DV)
+ */
+onRutInput(event: any) {
+  const valorOriginal = event.target.value || '';
+  
+  // Extrae números y K/k, limitando a 9 caracteres puros
+  const limpio = valorOriginal.replace(/[^0-9kK]/g, '').toUpperCase().slice(0, 9);
+  const rutFormateado = this.formatearRutChile(limpio);
+
+  // Asigna directamente al formulario de nuevo alumno
+  this.nuevoAlumno.rut_usuario = rutFormateado;
+
+  // Actualiza el valor visual en el input
+  if (event.target) {
+    event.target.value = rutFormateado;
+  }
+}
+
+/**
+ * Valida un RUT chileno usando el Algoritmo Módulo 11
+ */
+private validarRutChileno(rut: string): boolean {
+  if (!rut) return false;
+  const limpio = rut.replace(/[^0-9kK]/g, '').toUpperCase();
+  
+  // Un RUT con DV debe tener entre 8 y 9 caracteres (ej: 7654321K o 123456789)
+  if (limpio.length < 8 || limpio.length > 9) return false;
+
+  const cuerpo = limpio.slice(0, -1);
+  const dvIngresado = limpio.slice(-1);
+
+  let suma = 0;
+  let multiplicador = 2;
+
+  for (let i = cuerpo.length - 1; i >= 0; i--) {
+    suma += Number(cuerpo.charAt(i)) * multiplicador;
+    multiplicador = multiplicador === 7 ? 2 : multiplicador + 1;
+  }
+
+  const dvesperadoNum = 11 - (suma % 11);
+  let dvEsperado = '';
+
+  if (dvesperadoNum === 11) dvEsperado = '0';
+  else if (dvesperadoNum === 10) dvEsperado = 'K';
+  else dvEsperado = String(dvesperadoNum);
+
+  return dvIngresado === dvEsperado;
+}
+
+  /**
+   * Valida formato estándar de correo electrónico
+   */
+private validarCorreo(correo: string): boolean {
+  if (!correo) return false;
+  
+  // Exige caracteres válidos antes del @ y que finalice exactamente en @gmail.com
+  const regex = /^[a-zA-Z0-9._%+-]+@gmail\.com$/i;
+  
+  return regex.test(correo.trim());
+}
+onCorreoBlur(modo: 'nuevo' | 'editar' = 'nuevo') {
+  const target = modo === 'nuevo' ? this.nuevoAlumno : this.alumnoSeleccionado;
+  if (!target || !target.correo) return;
+
+  let correoLimpio = target.correo.trim();
+
+  // Si escribió por ejemplo 'juan.perez' sin el '@', le concatenamos '@gmail.com'
+  if (correoLimpio && !correoLimpio.includes('@')) {
+    target.correo = `${correoLimpio}@gmail.com`;
+  }
+}
+
+  /**
+   * Valida que el teléfono tenga exactamente 9 dígitos en formato chileno
+   */
+  private validarTelefonoChileno(telefono: any): boolean {
+    if (!telefono) return true; // Es opcional, pero si viene debe cumplir
+    const numStr = String(telefono).replace(/\D/g, '');
+    return numStr.length === 9;
+  }
+
+  /**
+   * Valida que la fecha de nacimiento corresponda a una edad de al menos 17 o 18 años
+   */
+  private validarEdadMinima(fechaNacimientoStr: string, edadMinima: number = 17): boolean {
+    if (!fechaNacimientoStr) return true; // Opcional si no es obligatorio
+
+    const fechaNac = new Date(fechaNacimientoStr);
+    if (isNaN(fechaNac.getTime())) return false;
+
+    const hoy = new Date();
+    let edad = hoy.getFullYear() - fechaNac.getFullYear();
+    const mes = hoy.getMonth() - fechaNac.getMonth();
+
+    if (mes < 0 || (mes === 0 && hoy.getDate() < fechaNac.getDate())) {
+      edad--;
+    }
+
+    return edad >= edadMinima && edad <= 90;
+  }
+
+  // ==========================================
+  // HELPERS Y PROCESAMIENTO DE DATOS
+  // ==========================================
 
   private extraerArreglo(res: any): any[] {
     if (!res) return [];
@@ -85,9 +220,6 @@ export class AdminAlumnosPage implements OnInit {
     return [];
   }
 
-  /**
-   * Extrae el ID del rol/tipo de usuario buscando en múltiples propiedades posibles
-   */
   obtenerTipoUsuario(alu: any): number {
     const val = alu?.id_tipo_usuario ?? 
                 alu?.tipo_usuario?.id_tipo_usuario ?? 
@@ -97,24 +229,6 @@ export class AdminAlumnosPage implements OnInit {
     return Number(val);
   }
 
-  /**
-   * Normaliza cualquier RUT al formato estándar con puntos y guión (XX.XXX.XXX-X)
-   */
-  private formatearRutChile(rut: string): string {
-    if (!rut) return '';
-    const limpio = rut.replace(/[^0-9kK]/g, '').toUpperCase();
-    if (limpio.length < 2) return rut;
-
-    const cuerpo = limpio.slice(0, -1);
-    const dv = limpio.slice(-1);
-    const cuerpoFormateado = Number(cuerpo).toLocaleString('es-CL');
-
-    return `${cuerpoFormateado}-${dv}`;
-  }
-
-  /**
-   * Extrae dinámicamente el puntaje total del alumno
-   */
   obtenerPuntajeReal(alu: any): number {
     if (!alu) return 0;
 
@@ -135,9 +249,6 @@ export class AdminAlumnosPage implements OnInit {
     return Number(alu.puntaje_total) || 0;
   }
 
-  /**
-   * Obtiene el conteo real de actividades del backend si el usuario es encargado
-   */
   async obtenerActividadesReales(alu: any): Promise<number> {
     if (!alu || !alu.rut_usuario) return 0;
 
@@ -162,9 +273,6 @@ export class AdminAlumnosPage implements OnInit {
     return 0;
   }
 
-  /**
-   * Carga los usuarios/alumnos y asigna el conteo de actividades
-   */
   obtenerAlumnos() {
     this.alumnoService.getAlumnos().subscribe({
       next: async (res: any) => {
@@ -344,13 +452,36 @@ export class AdminAlumnosPage implements OnInit {
   }
 
   /**
-   * Crea el alumno en el backend.
-   * La API se encarga de generar el hash con los números del RUT sin DV
-   * y enviar la notificación con las credenciales al correo del alumno.
+   * Registro de un nuevo alumno con validaciones estrictas
    */
   agregarAlumno() {
+    // 1. Campos obligatorios
     if (!this.nuevoAlumno.rut_usuario || !this.nuevoAlumno.nombre_completo || !this.nuevoAlumno.correo) {
       this.mostrarToast('RUT, Nombre y Correo son obligatorios', 'warning');
+      return;
+    }
+
+    // 2. Validación de RUT Chileno
+    if (!this.validarRutChileno(this.nuevoAlumno.rut_usuario)) {
+      this.mostrarToast('El RUT ingresado no es válido (verifique el dígito verificador)', 'danger');
+      return;
+    }
+
+    // 3. Validación de Correo Electrónico
+    if (!this.validarCorreo(this.nuevoAlumno.correo)) {
+      this.mostrarToast('El correo electrónico ingresado no tiene un formato válido (@gmail.com)', 'danger');
+      return;
+    }
+
+    // 4. Validación de Teléfono Chileno
+    if (this.nuevoAlumno.telefono && !this.validarTelefonoChileno(this.nuevoAlumno.telefono)) {
+      this.mostrarToast('El teléfono debe contener exactamente 9 dígitos (ej: 912345678)', 'warning');
+      return;
+    }
+
+    // 5. Validación de Edad Mínima (17 años)
+    if (this.nuevoAlumno.fecha_nacimiento && !this.validarEdadMinima(this.nuevoAlumno.fecha_nacimiento, 17)) {
+      this.mostrarToast('El alumno debe tener al menos 17 años cumplidos', 'warning');
       return;
     }
 
@@ -485,6 +616,22 @@ export class AdminAlumnosPage implements OnInit {
   async actualizarAlumno() {
     if (!this.alumnoSeleccionado) return;
     const rut = this.alumnoSeleccionado.rut_usuario;
+
+    // Validaciones al editar
+    if (!this.validarCorreo(this.alumnoSeleccionado.correo)) {
+      this.mostrarToast('El correo electrónico ingresado no es válido', 'danger');
+      return;
+    }
+
+    if (this.alumnoSeleccionado.telefono && !this.validarTelefonoChileno(this.alumnoSeleccionado.telefono)) {
+      this.mostrarToast('El teléfono debe tener 9 dígitos', 'warning');
+      return;
+    }
+
+    if (this.alumnoSeleccionado.fecha_nacimiento && !this.validarEdadMinima(this.alumnoSeleccionado.fecha_nacimiento, 17)) {
+      this.mostrarToast('El alumno debe tener al menos 17 años cumplidos', 'warning');
+      return;
+    }
 
     const cambios: string[] = [];
 

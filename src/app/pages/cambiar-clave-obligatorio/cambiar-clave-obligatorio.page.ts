@@ -19,6 +19,16 @@ export class CambiarClaveObligatorioPage implements OnInit {
   mostrarConfirmarClave: boolean = false;
   usuarioActual: any = null;
 
+  // Manejo de errores y requisitos de seguridad en vivo
+  errorPassword: string = '';
+  requisitosPass = {
+    longitud: false,
+    mayuscula: false,
+    minuscula: false,
+    numero: false,
+    especial: false
+  };
+
   constructor(
     private alumnoService: AlumnoService,
     private navCtrl: NavController,
@@ -52,9 +62,9 @@ export class CambiarClaveObligatorioPage implements OnInit {
     if (this.usuarioActual && Number(this.usuarioActual.id_tipo_usuario) === 2) {
       this.mostrarAlerta(
         'Acceso no requerido', 
-        'La cuenta de administrador no requiere cambio obligatorio de clave.'
+        'La cuenta de administrador no requiere cambio obligatorio de clave desde este módulo.'
       );
-      this.navCtrl.navigateRoot('/docentes');
+      this.navCtrl.navigateRoot('/home');
     }
   }
 
@@ -66,6 +76,43 @@ export class CambiarClaveObligatorioPage implements OnInit {
     this.mostrarConfirmarClave = !this.mostrarConfirmarClave;
   }
 
+  /**
+   * Evalúa los requisitos de complejidad en tiempo real mientras el usuario escribe
+   */
+  validarPasswordEnVivo() {
+    const pass = this.datosClave.nuevaPassword || '';
+
+    this.requisitosPass.longitud = pass.length >= 8;
+    this.requisitosPass.mayuscula = /[A-Z]/.test(pass);
+    this.requisitosPass.minuscula = /[a-z]/.test(pass);
+    this.requisitosPass.numero = /\d/.test(pass);
+    this.requisitosPass.especial = /[@$!%*?&#.\-_/*+]/.test(pass);
+
+    if (!pass) {
+      this.errorPassword = '';
+      return;
+    }
+
+    if (!this.requisitosPass.longitud || !this.requisitosPass.mayuscula || !this.requisitosPass.minuscula || !this.requisitosPass.numero || !this.requisitosPass.especial) {
+      this.errorPassword = 'La contraseña no cumple con todos los requisitos de seguridad.';
+    } else {
+      this.errorPassword = '';
+    }
+  }
+
+  /**
+   * Valida la estructura completa de la contraseña
+   */
+  private esPasswordValida(pass: string): boolean {
+    if (!pass || pass.length < 8) return false;
+    const tieneMayuscula = /[A-Z]/.test(pass);
+    const tieneMinuscula = /[a-z]/.test(pass);
+    const tieneNumero = /\d/.test(pass);
+    const tieneEspecial = /[@$!%*?&#.\-_/*+]/.test(pass);
+
+    return tieneMayuscula && tieneMinuscula && tieneNumero && tieneEspecial;
+  }
+
   async guardarNuevaClave() {
     const { nuevaPassword, confirmarPassword } = this.datosClave;
 
@@ -74,13 +121,18 @@ export class CambiarClaveObligatorioPage implements OnInit {
       return;
     }
 
-    if (nuevaPassword !== confirmarPassword) {
-      this.mostrarAlerta('Error de coincidencia', 'Las contraseñas ingresadas no coinciden.');
+    // 1. Validar que la clave cumpla todas las reglas de complejidad
+    if (!this.esPasswordValida(nuevaPassword.trim())) {
+      this.mostrarAlerta(
+        'Contraseña insegura', 
+        'La nueva contraseña debe tener al menos 8 caracteres, una mayúscula, una minúscula, un número y un carácter especial.'
+      );
       return;
     }
 
-    if (nuevaPassword.length < 6) {
-      this.mostrarAlerta('Contraseña débil', 'La nueva contraseña debe tener al menos 6 caracteres.');
+    // 2. Validar que ambas contraseñas coincidan
+    if (nuevaPassword !== confirmarPassword) {
+      this.mostrarAlerta('Error de coincidencia', 'Las contraseñas ingresadas no coinciden.');
       return;
     }
 
@@ -96,7 +148,6 @@ export class CambiarClaveObligatorioPage implements OnInit {
     });
     await loading.present();
 
-    // Se pasan los 2 argumentos separados como lo espera tu AlumnoService: (rut_usuario, nueva_password)
     this.alumnoService.cambiarPasswordObligatorio(rutUsuario, nuevaPassword.trim()).subscribe({
       next: async () => {
         await loading.dismiss();

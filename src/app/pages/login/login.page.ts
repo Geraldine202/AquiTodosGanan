@@ -1,6 +1,6 @@
 import { Component, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
-import { AlertController, LoadingController, NavController } from '@ionic/angular';
+import { AlertController, LoadingController, NavController, ViewWillEnter } from '@ionic/angular';
 
 import { AlumnoService } from '../../services/alumno'; 
 
@@ -10,7 +10,7 @@ import { AlumnoService } from '../../services/alumno';
   styleUrls: ['./login.page.scss'],
   standalone: false
 })
-export class LoginPage implements OnInit {
+export class LoginPage implements OnInit, ViewWillEnter {
 
   credenciales = {
     correo: '',
@@ -27,7 +27,20 @@ export class LoginPage implements OnInit {
     private navCtrl: NavController
   ) { }
 
-  ngOnInit() {
+  ngOnInit() { }
+
+  /**
+   * Al entrar a la página de login administrativo, fuerza la desautenticación limpia
+   * para asegurar que NINGÚN usuario quede precargado sin ingresar credenciales reales.
+   */
+  ionViewWillEnter() {
+    this.limpiarSesion();
+  }
+
+  private limpiarSesion() {
+    localStorage.clear();
+    sessionStorage.clear();
+    this.credenciales = { correo: '', password: '' };
   }
 
   toggleMostrarPassword() {
@@ -36,12 +49,12 @@ export class LoginPage implements OnInit {
 
   async iniciarSesion() {
     if (!this.credenciales.correo.trim() || !this.credenciales.password.trim()) {
-      this.mostrarAlerta('Campos Vacíos', 'Por favor, ingresa tu correo institucional y contraseña.');
+      this.mostrarAlerta('Campos Vacíos', 'Por favor, ingresa tu correo institucional y contraseña de Administrador.');
       return;
     }
 
     const loading = await this.loadingController.create({
-      message: 'Autenticando usuario...',
+      message: 'Verificando credenciales de administración...',
       spinner: 'crescent'
     });
     await loading.present();
@@ -51,11 +64,29 @@ export class LoginPage implements OnInit {
         await loading.dismiss();
         
         const usuario = res.usuario;
+        const rol = Number(usuario?.id_tipo_usuario);
+
+        // =========================================================================
+        // CONTROL DE ACCESO EXCLUSIVO PARA ADMINISTRADORES (id_tipo_usuario === 2)
+        // =========================================================================
+        if (rol !== 2) {
+          // Si el usuario es Alumno (1) o Docente (3), no se le permite ingresar a esta plataforma
+          this.limpiarSesion();
+          this.mostrarAlerta(
+            'Acceso Restringido', 
+            'Esta plataforma es de uso exclusivo para Administradores. Tu cuenta no cuenta con permisos para acceder.'
+          );
+          return;
+        }
+
+        // Si es Administrador (rol === 2), guardar sesión y token limpio
+        localStorage.clear();
+        sessionStorage.clear();
 
         if (usuario && usuario.rut_usuario) {
-          // Guardar información del usuario de manera consistente
           localStorage.setItem('rut_usuario', usuario.rut_usuario);
           localStorage.setItem('usuario', JSON.stringify(usuario));
+          localStorage.setItem('usuarioLogueado', JSON.stringify(usuario));
           localStorage.setItem('usuario_actual', JSON.stringify(usuario));
         }
         
@@ -65,29 +96,13 @@ export class LoginPage implements OnInit {
 
         this.alumnoService.guardarSesion(usuario);
 
-        const rol = Number(usuario?.id_tipo_usuario);
-
-        // 1. VERIFICAR SI DEBE CAMBIAR SU CONTRASEÑA OBLIGATORIAMENTE
-        // (Aplica a Alumnos: 1 y Docentes: 3; el Admin: 2 no realiza este flujo)
-        if (usuario.cambio_clave_obligatorio && rol !== 2) {
-          // Redirige a la ruta exacta de la nueva página
-          this.navCtrl.navigateRoot('/cambiar-clave-obligatorio');
-          return;
-        }
-
-        // 2. REDIRECCIÓN SEGÚN ROL SI NO REQUIERE CAMBIO DE CLAVE
-        if (rol === 3) {
-          // Docentes van a su panel
-          this.navCtrl.navigateRoot('/docentes');
-        } else {
-          // Alumnos (o cualquier otro rol regular) van a Home
-          this.navCtrl.navigateRoot('/home');
-        }
+        // Redireccionar al panel/home de administración
+        this.navCtrl.navigateRoot('/home');
       },
       error: async (err: any) => {
         await loading.dismiss();
         console.error('Error de autenticación:', err);
-        const mensajeError = err.error?.error || 'Las credenciales ingresadas no coinciden.';
+        const mensajeError = err.error?.error || 'Credenciales administrativas incorrectas.';
         this.mostrarAlerta('Error de Acceso', mensajeError);
       }
     });

@@ -156,12 +156,21 @@
             </ion-button>
           </div>
 
-          <ion-item class="input-modal" lines="none">
-            <ion-input label="RUT" labelPlacement="stacked" [(ngModel)]="nuevoAlumno.rut_usuario" placeholder="11.111.111-1"></ion-input>
-          </ion-item>
+          <!-- RUT con formateo en vivo -->
+        <ion-item class="input-modal" lines="none">
+          <ion-input 
+            label="RUT *" 
+            labelPlacement="stacked"
+            type="text" 
+            [(ngModel)]="nuevoAlumno.rut_usuario" 
+            (ionInput)="onRutInput($event)" 
+            placeholder="12.345.678-K"
+            maxlength="12">
+          </ion-input>
+        </ion-item>
 
           <ion-item class="input-modal" lines="none">
-            <ion-input label="Nombre completo" labelPlacement="stacked" [(ngModel)]="nuevoAlumno.nombre_completo" placeholder="Juan Pérez Solís"></ion-input>
+            <ion-input label="Nombre completo *" labelPlacement="stacked" [(ngModel)]="nuevoAlumno.nombre_completo" placeholder="Juan Pérez Solís"></ion-input>
           </ion-item>
 
           <ion-item class="input-modal" lines="none">
@@ -172,9 +181,17 @@
             </ion-select>
           </ion-item>
 
-          <ion-item class="input-modal" lines="none">
-            <ion-input label="Correo Electrónico" labelPlacement="stacked" [(ngModel)]="nuevoAlumno.correo" type="email" placeholder="juan@duocuc.cl"></ion-input>
-          </ion-item>
+      <!-- Correo institucional/general -->
+        <ion-item class="input-modal" lines="none">
+          <ion-input 
+            label="Correo Electrónico *" 
+            labelPlacement="stacked" 
+            [(ngModel)]="nuevoAlumno.correo" 
+            (ionBlur)="onCorreoBlur('nuevo')"
+            type="email" 
+            placeholder="alumno@gmail.com">
+          </ion-input>
+        </ion-item>
 
           <!-- Carrera Dinámica -->
           <ion-item class="input-modal" lines="none">
@@ -207,12 +224,14 @@
             <ion-input label="Dirección" labelPlacement="stacked" [(ngModel)]="nuevoAlumno.direccion" placeholder="Ej: Av. Concha y Toro 1400"></ion-input>
           </ion-item>
 
+          <!-- Teléfono en formato chileno (9 dígitos) -->
           <ion-item class="input-modal" lines="none">
-            <ion-input label="Teléfono" labelPlacement="stacked" [(ngModel)]="nuevoAlumno.telefono" type="number" placeholder="912345678"></ion-input>
+            <ion-input label="Teléfono (9 dígitos)" labelPlacement="stacked" [(ngModel)]="nuevoAlumno.telefono" type="tel" maxlength="9" placeholder="912345678"></ion-input>
           </ion-item>
 
+          <!-- Fecha Nacimiento con validación 17+ años -->
           <ion-item class="input-modal" lines="none">
-            <ion-input label="Fecha Nacimiento" labelPlacement="stacked" [(ngModel)]="nuevoAlumno.fecha_nacimiento" type="date"></ion-input>
+            <ion-input label="Fecha Nacimiento (Edad ≥ 17 años)" labelPlacement="stacked" [(ngModel)]="nuevoAlumno.fecha_nacimiento" type="date"></ion-input>
           </ion-item>
 
           <ion-button expand="block" class="btn-guardar-modal" (click)="agregarAlumno()">
@@ -255,10 +274,17 @@
           </ion-item>
 
           <ion-item class="input-modal" lines="none">
-            <ion-input label="Correo Electrónico" labelPlacement="stacked" [(ngModel)]="alumnoSeleccionado.correo" type="email"></ion-input>
+            <ion-input 
+              label="Correo Electrónico" 
+              labelPlacement="stacked" 
+              [(ngModel)]="alumnoSeleccionado.correo" 
+              (ionBlur)="onCorreoBlur('editar')"
+              type="email" 
+              placeholder="alumno@gmail.com">
+            </ion-input>
           </ion-item>
 
-          <!-- SWITCH CONSEJERO DE CARRERA (OPCIÓN B) -->
+          <!-- SWITCH CONSEJERO DE CARRERA -->
           <ion-item class="input-modal" lines="none" style="--background: rgba(var(--ion-color-primary-rgb), 0.05); border-radius: 10px; margin: 10px 0;">
             <ion-label>
               <h2 style="font-weight: 600; color: var(--ion-color-dark);">¿Es Consejero de Carrera?</h2>
@@ -329,7 +355,11 @@
           </ion-item>
 
           <ion-item class="input-modal" lines="none">
-            <ion-input label="Teléfono" labelPlacement="stacked" [(ngModel)]="alumnoSeleccionado.telefono" type="number"></ion-input>
+            <ion-input label="Teléfono (9 dígitos)" labelPlacement="stacked" [(ngModel)]="alumnoSeleccionado.telefono" type="tel" maxlength="9"></ion-input>
+          </ion-item>
+
+          <ion-item class="input-modal" lines="none">
+            <ion-input label="Fecha Nacimiento" labelPlacement="stacked" [(ngModel)]="alumnoSeleccionado.fecha_nacimiento" type="date"></ion-input>
           </ion-item>
 
           <!-- ===== SECCIÓN HISTORIAL Y BITÁCORA DE CAMBIOS ===== -->
