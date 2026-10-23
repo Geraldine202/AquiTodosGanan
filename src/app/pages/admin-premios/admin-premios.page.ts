@@ -47,7 +47,6 @@ export class AdminPremiosPage implements OnInit, ViewWillEnter {
 
   /**
    * Ciclo de vida de Ionic: Se ejecuta CADA VEZ que el usuario ingresa a esta vista.
-   * Evita tener que presionar F5 o recargar manualmente la página.
    */
   ionViewWillEnter() {
     this.cargarCatalogos();
@@ -61,7 +60,7 @@ export class AdminPremiosPage implements OnInit, ViewWillEnter {
       id_sede: [null, [Validators.required]],
       id_nivel: [1, [Validators.required]], // Nivel 1 (Bronce) por defecto
       puntos_requeridos: [1, [Validators.required, Validators.min(1)]], // Puntos > 0
-      stock: [1, [Validators.required, Validators.min(1)]], // Stock > 0 (ningún valor puede ser 0)
+      stock: [1, [Validators.required, Validators.min(1)]], // Por defecto para creación
       valor: [0, [Validators.min(0)]],
       rut_usuario: ['', [Validators.required]],
       estado_visibilidad: [true],
@@ -141,13 +140,21 @@ export class AdminPremiosPage implements OnInit, ViewWillEnter {
   cargarPremios() {
     this.cargando = true;
     this.actividadService.getPremios().subscribe({
-      next: (data) => {
-        this.premios = data || [];
+      next: (data: any) => {
+        const lista = Array.isArray(data) ? data : (data?.data || []);
+
+        // ORDENAMIENTO DESCENDENTE: Muestra los premios recién creados en primer lugar
+        this.premios = lista.sort((a: any, b: any) => {
+          const idA = Number(a.id_premio || a.id || 0);
+          const idB = Number(b.id_premio || b.id || 0);
+          return idB - idA;
+        });
+
         this.evaluarStockBajo();
         this.filtrarPremios();
         this.cargando = false;
       },
-      error: (err) => {
+      error: (err: any) => {
         console.error('Error cargando premios:', err);
         this.cargando = false;
         this.mostrarToast('Error al cargar la lista de premios', 'danger');
@@ -185,7 +192,7 @@ export class AdminPremiosPage implements OnInit, ViewWillEnter {
       return Number(premio.stock);
     }
     if (premio.stock_sede && Array.isArray(premio.stock_sede) && premio.stock_sede.length > 0) {
-      return Number(premio.stock_sede[0].cantidad || 0);
+      return Number(premio.stock_sede[0].cantidad ?? 0);
     }
     return 0;
   }
@@ -259,10 +266,15 @@ export class AdminPremiosPage implements OnInit, ViewWillEnter {
     this.idPremioSeleccionado = null;
     this.imagenPreview = null;
     this.archivoImagen = null;
+
+    // Al CREAR: Stock Mínimo = 1
+    this.premioForm.get('stock')?.setValidators([Validators.required, Validators.min(1)]);
+    this.premioForm.get('stock')?.updateValueAndValidity();
+
     this.premioForm.reset({
       id_nivel: 1, // Default: Bronce
       puntos_requeridos: 1, // Mínimo 1
-      stock: 1, // Mínimo 1
+      stock: 1, // Mínimo 1 al crear
       valor: 0,
       estado_visibilidad: true,
       imagen: ''
@@ -276,13 +288,19 @@ export class AdminPremiosPage implements OnInit, ViewWillEnter {
     this.imagenPreview = premio.imagen || null;
     this.archivoImagen = null;
 
+    // Al EDITAR: Stock Mínimo = 0 (Permite dejarlo agotado)
+    this.premioForm.get('stock')?.setValidators([Validators.required, Validators.min(0)]);
+    this.premioForm.get('stock')?.updateValueAndValidity();
+
+    const stockActual = this.obtenerStock(premio);
+
     this.premioForm.patchValue({
       descripcion: premio.descripcion || '',
       id_categoria: premio.id_categoria || null,
       id_sede: premio.id_sede || null,
       id_nivel: premio.id_nivel || 1,
       puntos_requeridos: premio.puntos_requeridos || 1,
-      stock: this.obtenerStock(premio) || 1,
+      stock: stockActual, // Mantiene el 0 si el stock está en 0
       valor: premio.valor || 0,
       rut_usuario: premio.rut_usuario || premio.usuario?.rut_usuario || '',
       estado_visibilidad: premio.estado_visibilidad ?? true,
@@ -297,7 +315,6 @@ export class AdminPremiosPage implements OnInit, ViewWillEnter {
   }
 
   async guardarPremio() {
-    // 1. Comprobar validez general del formulario
     if (this.premioForm.invalid) {
       this.premioForm.markAllAsTouched();
       this.mostrarToast('Por favor complete los campos obligatorios (*)', 'warning');
@@ -306,16 +323,23 @@ export class AdminPremiosPage implements OnInit, ViewWillEnter {
 
     const formVal = this.premioForm.value;
 
-    // 2. Validación explícita: Puntos Requeridos debe ser estrictamente > 0
     if (Number(formVal.puntos_requeridos) <= 0) {
       this.mostrarToast('Los puntos requeridos deben ser mayores a 0', 'warning');
       return;
     }
 
-    // 3. Validación explícita: Stock debe ser estrictamente > 0
-    if (Number(formVal.stock) <= 0) {
-      this.mostrarToast('El stock disponible debe ser mayor a 0', 'warning');
-      return;
+    // Validación según modo (Creación vs Edición)
+    const stockNum = Number(formVal.stock);
+    if (this.esEdicion) {
+      if (stockNum < 0) {
+        this.mostrarToast('El stock no puede ser un número negativo', 'warning');
+        return;
+      }
+    } else {
+      if (stockNum <= 0) {
+        this.mostrarToast('El stock inicial debe ser mayor a 0', 'warning');
+        return;
+      }
     }
 
     this.guardando = true;
@@ -338,7 +362,7 @@ export class AdminPremiosPage implements OnInit, ViewWillEnter {
         id_sede: Number(formVal.id_sede),
         id_nivel: Number(formVal.id_nivel || 1),
         puntos_requeridos: Number(formVal.puntos_requeridos),
-        stock: Number(formVal.stock),
+        stock: stockNum,
         rut_usuario: formVal.rut_usuario,
         estado_visibilidad: Boolean(formVal.estado_visibilidad),
         imagen: urlImagen
@@ -357,7 +381,7 @@ export class AdminPremiosPage implements OnInit, ViewWillEnter {
       }
 
       this.cerrarModal();
-      this.cargarPremios(); // Recarga la lista en pantalla automáticamente
+      this.cargarPremios(); // Recarga la lista en pantalla
     } catch (err: any) {
       console.error('Error al guardar premio:', err);
       const mensaje = err.error?.detail || 'Error al procesar la solicitud';

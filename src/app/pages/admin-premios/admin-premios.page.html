@@ -159,7 +159,7 @@
               <span>
                 <strong>Stock en sede:</strong> 
                 <ion-badge [color]="obtenerStock(premio) <= 3 ? 'danger' : 'success'" style="margin-left: 6px;">
-                  {{ obtenerStock(premio) <= 3 ? '⚠️ ' + obtenerStock(premio) + ' un.' : obtenerStock(premio) + ' unidades' }}
+                  {{ obtenerStock(premio) === 0 ? '⚠️ Agotado (0 un.)' : (obtenerStock(premio) <= 3 ? '⚠️ ' + obtenerStock(premio) + ' un.' : obtenerStock(premio) + ' unidades') }}
                 </ion-badge>
               </span>
             </div>
@@ -268,7 +268,6 @@
             </div>
 
             <ion-row>
-            <!-- En SECCIÓN 2: PARÁMETROS, NIVELES Y STOCK -->
             <ion-col size="12" size-md="4">
               <ion-item lines="outline" class="custom-input-item">
                 <ion-icon name="star-outline" slot="start" color="warning"></ion-icon>
@@ -284,16 +283,17 @@
               <ion-item lines="outline" class="custom-input-item">
                 <ion-icon name="cube-outline" slot="start" color="secondary"></ion-icon>
                 <ion-label position="stacked">Stock Disponible <span class="text-danger">*</span></ion-label>
-                <ion-input type="number" formControlName="stock" min="1"></ion-input>
+                <ion-input type="number" formControlName="stock" [min]="esEdicion ? 0 : 1"></ion-input>
               </ion-item>
               <ion-text color="danger" *ngIf="campoInvalido('stock')">
                 <p class="error-msg">
-                  <ion-icon name="alert-circle-outline"></ion-icon> El stock debe ser mayor a 0.
+                  <ion-icon name="alert-circle-outline"></ion-icon> 
+                  {{ esEdicion ? 'El stock no puede ser un número negativo.' : 'El stock debe ser mayor a 0.' }}
                 </p>
               </ion-text>
             </ion-col>
 
-              <!-- NUEVO SELECTOR DE NIVEL EN FORMULARIO -->
+              <!-- SELECTOR DE NIVEL EN FORMULARIO -->
               <ion-col size="12" size-md="4">
                 <ion-item lines="outline" class="custom-input-item">
                   <ion-icon name="ribbon-outline" slot="start" color="tertiary"></ion-icon>

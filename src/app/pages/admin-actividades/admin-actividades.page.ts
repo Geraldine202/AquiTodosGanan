@@ -22,16 +22,13 @@ export const fechaYHoraFuturaValidator: ValidatorFn = (control: AbstractControl)
 
   const ahora = new Date();
 
-  // Extraer año, mes y día LOCALES de hoy
   const anioHoy = ahora.getFullYear();
   const mesHoy = String(ahora.getMonth() + 1).padStart(2, '0');
   const diaHoy = String(ahora.getDate()).padStart(2, '0');
   const hoyStr = `${anioHoy}-${mesHoy}-${diaHoy}`;
 
-  // Extraer año, mes y día LOCALES de la fecha ingresada
   let fechaIngresadaStr = '';
   if (typeof fechaVal === 'string') {
-    // Si la cadena incluye 'T' pero sin zona horaria explicita o con formato YYYY-MM-DD
     fechaIngresadaStr = fechaVal.split('T')[0];
   } else if (fechaVal instanceof Date) {
     const a = fechaVal.getFullYear();
@@ -40,12 +37,12 @@ export const fechaYHoraFuturaValidator: ValidatorFn = (control: AbstractControl)
     fechaIngresadaStr = `${a}-${m}-${d}`;
   }
 
-  // 1. Fecha anterior a hoy (comparando Cadenas YYYY-MM-DD locales)
+  // 1. Fecha anterior a hoy
   if (fechaIngresadaStr < hoyStr) {
     return { fechaPasada: true };
   }
 
-  // 2. Si la fecha es HOY, validar que la hora de inicio sea posterior a la hora actual
+  // 2. Si es HOY, validar que la hora de inicio sea posterior a la actual
   if (fechaIngresadaStr === hoyStr && horaInicio) {
     const [horas, minutos] = horaInicio.split(':').map(Number);
     const fechaHoraInicio = new Date();
@@ -215,6 +212,8 @@ export class AdminActividadesPage implements OnInit, OnDestroy, ViewWillEnter, V
         this.esAdmin = (tipoUser === 2);
         this.esConsejero = (tipoUser === 3 || tipoUser === 4);
 
+        this.limpiarFormulario();
+
         if (this.listaActividades.length > 0) {
           this.filtrarActividades();
         }
@@ -263,40 +262,52 @@ export class AdminActividadesPage implements OnInit, OnDestroy, ViewWillEnter, V
     this.cargarDocentesYConsejeros();
   }
 
-cargarDocentesYConsejeros() {
-  this.actividadService.getResponsablesActivos().subscribe({
-    next: (data: any) => {
-      const responsablesRaw = Array.isArray(data) ? data : (data?.data || []);
+  cargarDocentesYConsejeros() {
+    this.actividadService.getResponsablesActivos().subscribe({
+      next: (data: any) => {
+        const responsablesRaw = Array.isArray(data) ? data : (data?.data || []);
 
-      const responsablesProcesados = responsablesRaw.map((u: any) => ({
-        ...u,
-        rut_usuario: u.rut_usuario || 'S/R',
-        nombre_completo: u.nombre_completo || 'Responsable'
-      }));
+        const responsablesProcesados = responsablesRaw.map((u: any) => ({
+          ...u,
+          rut_usuario: u.rut_usuario || 'S/R',
+          nombre_completo: u.nombre_completo || 'Responsable'
+        }));
 
-      const mapaUsuarios = new Map();
-      responsablesProcesados.forEach((u: any) => mapaUsuarios.set(u.rut_usuario, u));
+        const mapaUsuarios = new Map();
+        responsablesProcesados.forEach((u: any) => mapaUsuarios.set(u.rut_usuario, u));
 
-      this.listaDocentes = Array.from(mapaUsuarios.values());
-      this.docentesFiltrados = [...this.listaDocentes];
-    },
-    error: (err: any) => {
-      console.error('Error al cargar responsables activos:', err);
-      this.mostrarToast('Error al cargar la lista de responsables activos', 'danger');
-    }
-  });
-}
+        this.listaDocentes = Array.from(mapaUsuarios.values());
+        this.docentesFiltrados = [...this.listaDocentes];
+      },
+      error: (err: any) => {
+        console.error('Error al cargar responsables activos:', err);
+        this.mostrarToast('Error al cargar la lista de responsables activos', 'danger');
+      }
+    });
+  }
 
   private esResponsableActivo(rut: string): boolean {
     if (!rut) return false;
     const rutNorm = this.normalizarRut(rut);
+    // El admin siempre es válido, o de lo contrario valida contra la lista de responsables
+    if (this.usuarioLogueado && this.normalizarRut(this.usuarioLogueado.rut_usuario) === rutNorm) {
+      return true;
+    }
     return this.listaDocentes.some(u => this.normalizarRut(u.rut_usuario) === rutNorm);
   }
 
   cargarActividades() {
     this.actividadService.getActividades().subscribe({
       next: (data: any) => {
-        this.listaActividades = Array.isArray(data) ? data : (data?.data || []);
+        const lista = Array.isArray(data) ? data : (data?.data || []);
+
+        // ORDENAMIENTO DESCENDENTE
+        this.listaActividades = lista.sort((a: any, b: any) => {
+          const idA = Number(a.id_actividad || a.id || 0);
+          const idB = Number(b.id_actividad || b.id || 0);
+          return idB - idA;
+        });
+
         this.filtrarActividades();
       },
       error: () => this.mostrarToast('Error al cargar la lista de actividades', 'danger')
@@ -359,11 +370,12 @@ cargarDocentesYConsejeros() {
 
   filtrarActividades() {
     const q = this.busquedaActividad ? this.busquedaActividad.toLowerCase().trim() : '';
-    const rutUsuarioStorage = localStorage.getItem('rut_usuario') || localStorage.getItem('rut') || '';
+    const rutUsuarioStorage = localStorage.getItem('rut_usuario') || localStorage.getItem('rut') || sessionStorage.getItem('rut_usuario') || '';
     const rutSesionRaw = this.usuarioLogueado?.rut_usuario || this.usuarioLogueado?.rut || rutUsuarioStorage || '';
     const rutSesion = this.normalizarRut(rutSesionRaw);
 
     this.actividadesFiltradas = this.listaActividades.filter(act => {
+      // El administrador VE TODAS LAS ACTIVIDADES
       if (!this.esAdmin && rutSesion !== '') {
         const rutResponsableRaw = act.rut_usuario || act.usuario?.rut_usuario || act.rut_docente || '';
         const rutResponsable = this.normalizarRut(rutResponsableRaw);
@@ -383,7 +395,7 @@ cargarDocentesYConsejeros() {
   async iniciarActividadAdmin(act: any) {
     const alert = await this.alertController.create({
       header: 'Iniciar Actividad',
-      message: `¿Deseas poner en curso "${act.nombre_actividad}"? Se habilitará la toma de asistencia inmediata.`,
+      message: `¿Deseas poner en curso "${act.nombre_actividad}"? Se habilitará el control de asistencia.`,
       buttons: [
         { text: 'Cancelar', role: 'cancel' },
         {
@@ -394,9 +406,9 @@ cargarDocentesYConsejeros() {
                 this.mostrarToast('Actividad puesta En Curso exitosamente', 'success');
                 this.cargarActividades();
               },
-              error: (err) => {
+              error: async (err) => {
                 const msg = err.error?.detail || 'No se pudo iniciar la actividad.';
-                this.mostrarToast(msg, 'danger');
+                await this.mostrarAlerta('Error al Iniciar', msg);
               }
             });
           }
@@ -409,7 +421,7 @@ cargarDocentesYConsejeros() {
   async terminarActividadAdmin(act: any) {
     const alert = await this.alertController.create({
       header: 'Finalizar Actividad',
-      message: `¿Deseas finalizar "${act.nombre_actividad}"? Se liquidarán los puntos a los alumnos que registraron asistencia.`,
+      message: `¿Deseas finalizar "${act.nombre_actividad}"? Se liquidarán los puntos e incrementará la participación activa.`,
       buttons: [
         { text: 'Cancelar', role: 'cancel' },
         {
@@ -417,12 +429,12 @@ cargarDocentesYConsejeros() {
           handler: () => {
             this.actividadService.terminarActividad(act.id_actividad).subscribe({
               next: () => {
-                this.mostrarToast('Actividad finalizada y puntos liquidados', 'success');
+                this.mostrarToast('Actividad finalizada, puntos liquidados.', 'success');
                 this.cargarActividades();
               },
-              error: (err) => {
+              error: async (err) => {
                 const msg = err.error?.detail || 'No se pudo finalizar la actividad.';
-                this.mostrarToast(msg, 'danger');
+                await this.mostrarAlerta('Error al Finalizar', msg);
               }
             });
           }
@@ -454,7 +466,7 @@ cargarDocentesYConsejeros() {
           rut_usuario: est.rut_usuario || est.rut || 'S/R',
           nombre: est.nombre || est.nombre_completo || 'Estudiante',
           nombre_completo: est.nombre_completo || est.nombre || 'Estudiante',
-          asistio: Boolean(est.asistio)
+          asistio: est.asistio !== undefined && est.asistio !== null ? Boolean(est.asistio) : false
         }));
 
         this.resumenInscritos = {
@@ -512,12 +524,12 @@ cargarDocentesYConsejeros() {
     ).subscribe({
       next: (res: any) => {
         this.cargandoAsistencia = false;
-        const msg = res?.mensaje || 'Asistencia registrada correctamente.';
+        const msg = res?.mensaje || 'Asistencia y participación activa actualizadas correctamente.';
         this.mostrarToast(msg, 'success');
         if (this.modalDetalles) this.modalDetalles.dismiss();
         this.cargarActividades();
       },
-      error: (err: any) => {
+      error: async (err: any) => {
         this.cargandoAsistencia = false;
         let msg = 'Error al registrar la asistencia';
         if (err.status === 422 && Array.isArray(err.error?.detail)) {
@@ -527,7 +539,7 @@ cargarDocentesYConsejeros() {
         } else if (err.error?.detail) {
           msg = err.error.detail;
         }
-        this.mostrarToast(msg, 'danger');
+        await this.mostrarAlerta('Error de Asistencia', msg);
       }
     });
   }
@@ -604,22 +616,30 @@ cargarDocentesYConsejeros() {
   }
 
   limpiarFormulario() {
-    const rutSesion = this.usuarioLogueado?.rut_usuario || localStorage.getItem('rut_usuario') || '';
-    let responsableNom = '';
+    const rutSesion = this.usuarioLogueado?.rut_usuario || 
+      this.usuarioLogueado?.rut || 
+      localStorage.getItem('rut_usuario') || 
+      sessionStorage.getItem('rut_usuario') || '';
 
-    if (this.esConsejero && this.usuarioLogueado) {
-      responsableNom = this.usuarioLogueado.nombre_completo || 
-        `${this.usuarioLogueado.p_nombre || ''} ${this.usuarioLogueado.p_apellido || ''}`.trim() || 'Responsable';
-    }
+    const nombreResponsable = this.usuarioLogueado?.nombre_completo || 
+      `${this.usuarioLogueado?.p_nombre || ''} ${this.usuarioLogueado?.p_apellido || ''}`.trim() || 
+      'Responsable';
+
+    const idSedeUsuario = Number(
+      this.usuarioLogueado?.id_sede ?? 
+      this.usuarioLogueado?.sede?.id_sede ?? 
+      localStorage.getItem('id_sede') ?? 
+      1
+    );
 
     this.formAgregar.reset({
       nombre_actividad: '',
       descripcion: '',
-      responsable_actividad: responsableNom,
+      responsable_actividad: nombreResponsable,
       rut_usuario: rutSesion,
       id_tipo_actividad: null,
       id_estado_actividad: 1,
-      id_sede: null,
+      id_sede: idSedeUsuario,
       fecha: '',
       hora_inicio: '',
       hora_termino: '',
@@ -629,6 +649,15 @@ cargarDocentesYConsejeros() {
       requisito: '',
       img_actv: ''
     });
+
+    // Como es Admin, mantiene siempre habilitados los controles para reasignar sede o responsable
+    if (!this.esAdmin) {
+      this.formAgregar.get('responsable_actividad')?.disable();
+      this.formAgregar.get('id_sede')?.disable();
+    } else {
+      this.formAgregar.get('responsable_actividad')?.enable();
+      this.formAgregar.get('id_sede')?.enable();
+    }
   }
 
   private formatearFecha(fechaStr: string): string {
@@ -647,14 +676,17 @@ cargarDocentesYConsejeros() {
   }
 
   private construirPayload(fValues: any): ActividadPayload {
+    const idSedeVal = Number(fValues.id_sede);
+    const idTipoVal = Number(fValues.id_tipo_actividad);
+
     return {
       nombre_actividad: fValues.nombre_actividad,
       descripcion: fValues.descripcion || 'Sin descripción',
       responsable_actividad: fValues.responsable_actividad || 'Por asignar',
-      rut_usuario: fValues.rut_usuario,
-      id_tipo_actividad: Number(fValues.id_tipo_actividad),
+      rut_usuario: fValues.rut_usuario || this.usuarioLogueado?.rut_usuario || '',
+      id_tipo_actividad: isNaN(idTipoVal) ? 1 : idTipoVal,
       id_estado_actividad: fValues.id_estado_actividad ? Number(fValues.id_estado_actividad) : 1,
-      id_sede: fValues.id_sede ? Number(fValues.id_sede) : 1,
+      id_sede: isNaN(idSedeVal) || idSedeVal === 0 ? 1 : idSedeVal,
       fecha: this.formatearFecha(fValues.fecha),
       hora_inicio: this.formatearHora(fValues.hora_inicio),
       hora_termino: this.formatearHora(fValues.hora_termino),
@@ -666,22 +698,28 @@ cargarDocentesYConsejeros() {
     };
   }
 
-  guardarActividad(modal: IonModal) {
+  async guardarActividad(modal: IonModal) {
     if (this.formAgregar.invalid) {
       this.formAgregar.markAllAsTouched();
       this.mostrarToast('Por favor, verifique la fecha, horas y campos obligatorios (*)', 'warning');
       return;
     }
 
-    if (!this.esResponsableActivo(this.formAgregar.value.rut_usuario)) {
-      this.mostrarToast('El responsable seleccionado no posee una matrícula activa o se encuentra suspendido/retirado.', 'danger');
+    // Se extrae getRawValue() para obtener rut_usuario e id_sede independientemente de su estado de habilitación
+    const formValues = this.formAgregar.getRawValue();
+
+    if (this.listaDocentes.length > 0 && !this.esResponsableActivo(formValues.rut_usuario)) {
+      await this.mostrarAlerta(
+        'Responsable Inactivo', 
+        'El responsable seleccionado no posee una matrícula activa o se encuentra suspendido/retirado.'
+      );
       return;
     }
 
     if (this.cargandoGuardado) return;
 
     this.cargandoGuardado = true;
-    const payload = this.construirPayload(this.formAgregar.value);
+    const payload = this.construirPayload(formValues);
 
     this.actividadService.crearActividad(payload).subscribe({
       next: () => {
@@ -691,10 +729,16 @@ cargarDocentesYConsejeros() {
         modal.dismiss();
         this.limpiarFormulario();
       },
-      error: (err: any) => {
+      error: async (err: any) => {
         this.cargandoGuardado = false;
-        console.error('Error al crear:', err);
-        this.mostrarToast('Error al crear la actividad', 'danger');
+        console.error('Error al crear actividad:', err);
+
+        const mensajeBackend = typeof err.error?.detail === 'string'
+          ? err.error.detail
+          : (err.error?.message || err.error?.error || 'No fue posible registrar la actividad.');
+
+        // Ventana emergente obligatoria para mostrar traslapes de horario o errores
+        await this.mostrarAlerta('Conflicto o Error de Validación', mensajeBackend);
       }
     });
   }
@@ -706,12 +750,10 @@ cargarDocentesYConsejeros() {
     }
 
     if (!esReprogramacion && this.tieneInscritos(act)) {
-      const alertBloqueo = await this.alertController.create({
-        header: 'Edición Denegada',
-        message: 'No puedes editar los datos de una actividad que ya cuenta con alumnos inscritos.',
-        buttons: ['Entendido']
-      });
-      await alertBloqueo.present();
+      await this.mostrarAlerta(
+        'Edición Denegada',
+        'No puedes editar los datos de una actividad que ya cuenta con alumnos inscritos.'
+      );
       return;
     }
 
@@ -742,25 +784,38 @@ cargarDocentesYConsejeros() {
       img_actv: act.img_actv || ''
     });
 
+    if (!this.esAdmin) {
+      this.formEdicion.get('responsable_actividad')?.disable();
+      this.formEdicion.get('id_sede')?.disable();
+    } else {
+      this.formEdicion.get('responsable_actividad')?.enable();
+      this.formEdicion.get('id_sede')?.enable();
+    }
+
     modal.present();
   }
 
-  actualizarActividad(modal: IonModal) {
+  async actualizarActividad(modal: IonModal) {
     if (this.formEdicion.invalid) {
       this.formEdicion.markAllAsTouched();
       this.mostrarToast('Por favor, verifique la fecha, horas y campos obligatorios (*)', 'warning');
       return;
     }
 
-    if (!this.esResponsableActivo(this.formEdicion.value.rut_usuario)) {
-      this.mostrarToast('El responsable seleccionado no posee una matrícula activa o se encuentra suspendido/retirado.', 'danger');
+    const formValues = this.formEdicion.getRawValue();
+
+    if (this.listaDocentes.length > 0 && !this.esResponsableActivo(formValues.rut_usuario)) {
+      await this.mostrarAlerta(
+        'Responsable Inactivo', 
+        'El responsable seleccionado no posee una matrícula activa o se encuentra suspendido/retirado.'
+      );
       return;
     }
 
     if (!this.idActividadSeleccionada || this.cargandoGuardado) return;
 
     this.cargandoGuardado = true;
-    const payload = this.construirPayload(this.formEdicion.value);
+    const payload = this.construirPayload(formValues);
 
     if (this.modoReprogramacionModal) {
       payload.id_estado_actividad = 1;
@@ -780,11 +835,11 @@ cargarDocentesYConsejeros() {
               this.cargarActividades();
               modal.dismiss();
             },
-            error: (errGen: any) => {
+            error: async (errGen: any) => {
               this.cargandoGuardado = false;
               console.error('Error al reprogramar:', errGen);
               const msg = errGen.error?.detail || err.error?.detail || 'Error al reprogramar la actividad.';
-              this.mostrarToast(msg, 'danger');
+              await this.mostrarAlerta('Conflicto o Error de Reprogramación', msg);
             }
           });
         }
@@ -798,11 +853,11 @@ cargarDocentesYConsejeros() {
           this.cargarActividades();
           modal.dismiss();
         },
-        error: (err: any) => {
+        error: async (err: any) => {
           this.cargandoGuardado = false;
           console.error('Error al actualizar:', err);
           const msg = err.error?.detail || 'Error al actualizar la actividad';
-          this.mostrarToast(msg, 'danger');
+          await this.mostrarAlerta('Conflicto o Error de Actualización', msg);
         }
       });
     }
@@ -812,12 +867,10 @@ cargarDocentesYConsejeros() {
     const actividadObj = typeof act === 'object' ? act : this.listaActividades.find(a => a.id_actividad === act);
 
     if (this.tieneInscritos(actividadObj)) {
-      const alertBloqueo = await this.alertController.create({
-        header: 'Acción Denegada',
-        message: 'No puedes eliminar esta actividad porque ya cuenta con alumnos inscritos.',
-        buttons: ['Entendido']
-      });
-      await alertBloqueo.present();
+      await this.mostrarAlerta(
+        'Acción Denegada',
+        'No puedes eliminar esta actividad porque ya cuenta con alumnos inscritos.'
+      );
       return;
     }
 
@@ -850,8 +903,20 @@ cargarDocentesYConsejeros() {
         this.mostrarToast('Actividad eliminada correctamente', 'success');
         this.cargarActividades();
       },
-      error: () => this.mostrarToast('Error al eliminar la actividad', 'danger')
+      error: async (err: any) => {
+        const msg = err.error?.detail || 'Error al eliminar la actividad';
+        await this.mostrarAlerta('Error de Eliminación', msg);
+      }
     });
+  }
+
+  async mostrarAlerta(titulo: string, mensaje: string) {
+    const alert = await this.alertController.create({
+      header: titulo,
+      message: mensaje,
+      buttons: ['Entendido']
+    });
+    await alert.present();
   }
 
   async mostrarToast(mensaje: string, color: string) {
@@ -861,6 +926,6 @@ cargarDocentesYConsejeros() {
       color: color,
       position: 'bottom'
     });
-    toast.present();
+    await toast.present();
   }
 }

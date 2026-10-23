@@ -51,7 +51,7 @@
   <ion-grid *ngIf="!cargando && docentesFiltrados.length > 0" class="ion-no-padding">
     <ion-row>
       <ion-col size="12" size-md="6" size-lg="4" *ngFor="let docente of docentesFiltrados">
-        <ion-card class="premio-card docente-card shadow-sm" [class.docente-inactivo]="docente.id_estado_matricula === 3">
+        <ion-card class="premio-card docente-card shadow-sm" [class.docente-inactivo]="docente.id_estado_matricula === 3 || docente.id_estado_usuario === 3">
           
           <ion-card-header>
             <div class="ion-flex ion-justify-content-between ion-align-items-center ion-margin-bottom">
@@ -62,8 +62,8 @@
               </ion-card-subtitle>
 
               <!-- Estado de la matrícula/contrato -->
-              <ion-badge [color]="docente.id_estado_matricula === 3 ? 'danger' : 'success'">
-                {{ docente.id_estado_matricula === 3 ? 'Inactivo' : 'Activo' }}
+              <ion-badge [color]="(docente.id_estado_matricula === 3 || docente.id_estado_usuario === 3) ? 'danger' : 'success'">
+                {{ (docente.id_estado_matricula === 3 || docente.id_estado_usuario === 3) ? 'Inactivo' : 'Activo' }}
               </ion-badge>
             </div>
 
@@ -87,9 +87,14 @@
               <span><strong>Correo:</strong> {{ docente.correo }}</span>
             </div>
 
-            <div class="info-row">
+            <div class="info-row" *ngIf="docente.telefono">
               <ion-icon name="call-outline"></ion-icon>
-              <span><strong>Teléfono:</strong> {{ docente.telefono || 'Sin especificar' }}</span>
+              <span><strong>Teléfono:</strong> {{ docente.telefono }}</span>
+            </div>
+
+            <div class="info-row" *ngIf="docente.direccion">
+              <ion-icon name="home-outline"></ion-icon>
+              <span><strong>Dirección:</strong> {{ docente.direccion }}</span>
             </div>
 
             <div class="info-row" *ngIf="docente.genero">
@@ -104,7 +109,7 @@
               </ion-button>
 
               <ion-button 
-                *ngIf="docente.id_estado_matricula !== 3" 
+                *ngIf="docente.id_estado_matricula !== 3 && docente.id_estado_usuario !== 3" 
                 fill="outline" 
                 color="danger" 
                 size="small" 
@@ -113,7 +118,7 @@
               </ion-button>
 
               <ion-button 
-                *ngIf="docente.id_estado_matricula === 3" 
+                *ngIf="docente.id_estado_matricula === 3 || docente.id_estado_usuario === 3" 
                 fill="outline" 
                 color="success" 
                 size="small" 
@@ -161,13 +166,18 @@
             <div class="preview-box-formal">
               <input type="file" (change)="onFileSelected($event)" accept="image/*" #fileInputAdd hidden />
               
-              <div (click)="fileInputAdd.click()">
-                <img *ngIf="imagenPreview" [src]="imagenPreview" alt="Foto del docente" />
-                <div *ngIf="!imagenPreview" class="placeholder-content">
-                  <ion-icon name="cloud-upload-outline"></ion-icon>
-                  <span>Haga clic para subir la foto del docente</span>
-                  <small class="text-muted">Formatos aceptados: JPG, PNG, WEBP</small>
-                </div>
+              <div *ngIf="!imagenPreview" (click)="fileInputAdd.click()" class="placeholder-content" style="cursor: pointer;">
+                <ion-icon name="cloud-upload-outline"></ion-icon>
+                <span>Haga clic para subir la foto del docente</span>
+                <small class="text-muted">Formatos aceptados: JPG, PNG, WEBP</small>
+              </div>
+
+              <div *ngIf="imagenPreview" class="ion-text-center ion-padding">
+                <img [src]="imagenPreview" alt="Foto del docente" style="max-width: 140px; border-radius: 8px; display: block; margin: 0 auto 10px;" />
+                <ion-button fill="outline" color="danger" size="small" (click)="quitarImagenAgregar()">
+                  <ion-icon name="trash-outline" slot="start"></ion-icon>
+                  Quitar Imagen
+                </ion-button>
               </div>
             </div>
           </div>
@@ -262,6 +272,17 @@
                 <small class="text-danger ion-padding-start" *ngIf="errores.fecha_nacimiento">{{ errores.fecha_nacimiento }}</small>
               </ion-col>
             </ion-row>
+
+            <!-- Dirección Registro -->
+            <ion-item lines="outline" class="custom-input-item">
+              <ion-icon name="home-outline" slot="start"></ion-icon>
+              <ion-label position="stacked">Dirección Domiciliaria</ion-label>
+              <ion-input 
+                [(ngModel)]="nuevoDocente.direccion" 
+                name="direccion" 
+                placeholder="Ej: Av. Concha y Toro 1340, Puente Alto">
+              </ion-input>
+            </ion-item>
           </div>
 
           <!-- SECCIÓN 3: ASIGNACIÓN ACADÉMICA -->
@@ -364,20 +385,18 @@
 
             <ion-row>
               <ion-col size="12" size-md="6">
-                <!-- Correo Editar -->
+                <!-- Correo Editar (INHABILITADO) -->
                 <ion-item lines="outline" class="custom-input-item">
                   <ion-icon name="mail-outline" slot="start"></ion-icon>
-                  <ion-label position="stacked">Correo Electrónico <span class="text-danger">*</span></ion-label>
+                  <ion-label position="stacked">Correo Electrónico (No editable)</ion-label>
                   <ion-input 
                     type="email" 
                     [(ngModel)]="docenteSeleccionado.correo" 
-                    (ionBlur)="onCorreoBlur('editar')" 
                     name="edit_correo" 
-                    placeholder="docente@gmail.com" 
-                    required>
+                    readonly 
+                    style="opacity: 0.7;">
                   </ion-input>
                 </ion-item>
-                <small class="text-danger ion-padding-start" *ngIf="errores.correo">{{ errores.correo }}</small>
               </ion-col>
 
               <ion-col size="12" size-md="6">
@@ -398,12 +417,23 @@
               </ion-col>
             </ion-row>
 
+            <!-- Dirección Editar -->
+            <ion-item lines="outline" class="custom-input-item">
+              <ion-icon name="home-outline" slot="start"></ion-icon>
+              <ion-label position="stacked">Dirección Domiciliaria</ion-label>
+              <ion-input 
+                [(ngModel)]="docenteSeleccionado.direccion" 
+                name="edit_direccion" 
+                placeholder="Ej: Av. Concha y Toro 1340, Puente Alto">
+              </ion-input>
+            </ion-item>
+
             <ion-row>
               <ion-col size="12" size-md="6">
                 <ion-item lines="outline" class="custom-input-item">
                   <ion-icon name="people-circle-outline" slot="start"></ion-icon>
-                  <ion-label position="stacked">Género</ion-label>
-                  <ion-select [(ngModel)]="docenteSeleccionado.genero" name="edit_genero" interface="popover">
+                  <ion-label position="stacked">Género <span class="text-danger">*</span></ion-label>
+                  <ion-select [(ngModel)]="docenteSeleccionado.genero" name="edit_genero" placeholder="Seleccione Género" interface="popover">
                     <ion-select-option value="Masculino">Masculino</ion-select-option>
                     <ion-select-option value="Femenino">Femenino</ion-select-option>
                     <ion-select-option value="Otro">Otro / Prefiero no decir</ion-select-option>
@@ -415,7 +445,7 @@
                 <ion-item lines="outline" class="custom-input-item">
                   <ion-icon name="location-outline" slot="start"></ion-icon>
                   <ion-label position="stacked">Sede Asignada <span class="text-danger">*</span></ion-label>
-                  <ion-select [(ngModel)]="docenteSeleccionado.id_sede" name="edit_id_sede" required interface="popover">
+                  <ion-select [(ngModel)]="docenteSeleccionado.id_sede" name="edit_id_sede" placeholder="Seleccione Sede" required interface="popover">
                     <ion-select-option *ngFor="let s of sedes" [value]="s.id_sede">
                       {{ s.descripcion || s.nombre_sede }}
                     </ion-select-option>

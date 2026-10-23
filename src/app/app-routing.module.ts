@@ -5,7 +5,7 @@ import { authGuard } from './guards/auth-guard';
 const routes: Routes = [
   {
     path: '',
-    redirectTo: 'home',
+    redirectTo: 'login', // <-- Redirige automáticamente al Login al ejecutar ionic serve
     pathMatch: 'full'
   },
   {
@@ -61,11 +61,6 @@ const routes: Routes = [
     loadChildren: () => import('./pages/cambiar-clave-obligatorio/cambiar-clave-obligatorio.module').then( m => m.CambiarClaveObligatorioPageModule),
     canActivate: [authGuard]
   }
-
-
-
-
-
 ];
 
 @NgModule({

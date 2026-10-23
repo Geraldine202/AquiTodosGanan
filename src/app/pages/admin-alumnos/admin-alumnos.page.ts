@@ -17,7 +17,6 @@ export class AdminAlumnosPage implements OnInit, ViewWillEnter {
   alumnos: any[] = []; 
   alumnosFiltrados: any[] = [];
 
-  // Control para el segmento: 'todos' | 'alumnos' | 'consejeros'
   filtroApartado: string = 'todos';
 
   carreras: any[] = [];
@@ -32,6 +31,18 @@ export class AdminAlumnosPage implements OnInit, ViewWillEnter {
   alumnoSeleccionado: any = null; 
   estadoPrevio: any = null;
   justificacionEstado: string = '';
+
+  archivoSeleccionado: File | null = null;
+  imagenPreview: string | null = null;
+  eliminarFotoFlag: boolean = false;
+  textoBuscar: string = '';
+
+  errores = {
+    rut: '',
+    correo: '',
+    telefono: '',
+    fecha_nacimiento: ''
+  };
 
   nuevoAlumno: any = {
     rut_usuario: '', 
@@ -48,7 +59,7 @@ export class AdminAlumnosPage implements OnInit, ViewWillEnter {
     id_jornada_carrera: null,
     id_tipo_carrera: null,
     direccion: '', 
-    telefono: null, 
+    telefono: '', 
     fecha_nacimiento: '',
     id_requisito: null,
     puntaje_total: 0,
@@ -57,12 +68,9 @@ export class AdminAlumnosPage implements OnInit, ViewWillEnter {
     matriculado: true,
     suspension: false,
     sumario: false,
-    observacion: ''
+    observacion: '',
+    img_usr: ''
   };
-
-  archivoSeleccionado: File | null = null;
-  imagenPreview: string | null = null;
-  textoBuscar: string = '';
 
   constructor(
     private alumnoService: AlumnoService, 
@@ -73,21 +81,54 @@ export class AdminAlumnosPage implements OnInit, ViewWillEnter {
 
   ngOnInit() { }
 
-  /**
-   * Ciclo de vida de Ionic: Se ejecuta automáticamente cada vez que se entra a la página (evita usar F5)
-   */
   ionViewWillEnter() {
     this.obtenerAlumnos(); 
     this.obtenerCatalogos();
   }
 
   // ==========================================
+  // MÉTODOS DE MANEJO DE IMÁGENES
+  // ==========================================
+
+  onFileSelected(event: any) {
+    const file = event.target.files[0];
+    if (file) {
+      this.archivoSeleccionado = file;
+      this.eliminarFotoFlag = false;
+      const reader = new FileReader();
+      reader.onload = () => {
+        this.imagenPreview = reader.result as string;
+      };
+      reader.readAsDataURL(file);
+    }
+  }
+
+  quitarImagen(modo: 'nuevo' | 'editar' = 'editar') {
+    this.archivoSeleccionado = null;
+    this.imagenPreview = null;
+
+    if (modo === 'nuevo') {
+      this.nuevoAlumno.img_usr = null;
+      this.nuevoAlumno.imagen = null;
+    } else if (this.alumnoSeleccionado) {
+      this.alumnoSeleccionado.img_usr = null;
+      this.alumnoSeleccionado.imagen = null;
+      this.eliminarFotoFlag = true;
+    }
+
+    this.mostrarToast('Fotografía eliminada', 'warning');
+  }
+
+  limpiarImagenes() {
+    this.archivoSeleccionado = null;
+    this.imagenPreview = null;
+    this.eliminarFotoFlag = false;
+  }
+
+  // ==========================================
   // MÉTODOS DE VALIDACIÓN Y FORMATEO
   // ==========================================
 
-  /**
-   * Formatea un RUT dinámicamente con puntos y guión a medida que el usuario escribe
-   */
   private formatearRutChile(rut: string): string {
     if (!rut) return '';
     const limpio = rut.replace(/[^0-9kK]/g, '').toUpperCase();
@@ -101,97 +142,154 @@ export class AdminAlumnosPage implements OnInit, ViewWillEnter {
     return `${cuerpoFormateado}-${dv}`;
   }
 
-  /**
-   * Valida un RUT chileno usando el Algoritmo Módulo 11
-   */
-/**
- * Evento input para formatear el RUT en vivo en el formulario
- * Limita el ingreso a un máximo de 9 caracteres (8 cuerpo + 1 DV)
- */
-onRutInput(event: any) {
-  const valorOriginal = event.target.value || '';
-  
-  // Extrae números y K/k, limitando a 9 caracteres puros
-  const limpio = valorOriginal.replace(/[^0-9kK]/g, '').toUpperCase().slice(0, 9);
-  const rutFormateado = this.formatearRutChile(limpio);
+  onRutInput(event: any, modo: 'nuevo' | 'editar' = 'nuevo') {
+    let valorOriginal = event.target.value || '';
+    const limpio = valorOriginal.replace(/[^0-9kK]/g, '').toUpperCase();
+    
+    const acotado = limpio.length > 9 ? limpio.slice(0, 9) : limpio;
+    const rutFormateado = this.formatearRutChile(acotado);
 
-  // Asigna directamente al formulario de nuevo alumno
-  this.nuevoAlumno.rut_usuario = rutFormateado;
+    if (modo === 'nuevo') {
+      this.nuevoAlumno.rut_usuario = rutFormateado;
+    } else if (this.alumnoSeleccionado) {
+      this.alumnoSeleccionado.rut_usuario = rutFormateado;
+    }
 
-  // Actualiza el valor visual en el input
-  if (event.target) {
-    event.target.value = rutFormateado;
-  }
-}
+    if (event.target) {
+      event.target.value = rutFormateado;
+    }
 
-/**
- * Valida un RUT chileno usando el Algoritmo Módulo 11
- */
-private validarRutChileno(rut: string): boolean {
-  if (!rut) return false;
-  const limpio = rut.replace(/[^0-9kK]/g, '').toUpperCase();
-  
-  // Un RUT con DV debe tener entre 8 y 9 caracteres (ej: 7654321K o 123456789)
-  if (limpio.length < 8 || limpio.length > 9) return false;
-
-  const cuerpo = limpio.slice(0, -1);
-  const dvIngresado = limpio.slice(-1);
-
-  let suma = 0;
-  let multiplicador = 2;
-
-  for (let i = cuerpo.length - 1; i >= 0; i--) {
-    suma += Number(cuerpo.charAt(i)) * multiplicador;
-    multiplicador = multiplicador === 7 ? 2 : multiplicador + 1;
+    if (acotado.length >= 8) {
+      if (!this.validarRutChileno(rutFormateado)) {
+        this.errores.rut = 'El RUT o dígito verificador no es válido (Módulo 11)';
+      } else {
+        this.errores.rut = '';
+      }
+    } else if (acotado.length > 0) {
+      this.errores.rut = 'RUT incompleto (debe tener al menos 8 caracteres)';
+    } else {
+      this.errores.rut = '';
+    }
   }
 
-  const dvesperadoNum = 11 - (suma % 11);
-  let dvEsperado = '';
+  private validarRutChileno(rut: string): boolean {
+    if (!rut) return false;
+    const limpio = rut.replace(/[^0-9kK]/g, '').toUpperCase();
+    
+    if (limpio.length < 8 || limpio.length > 9) return false;
 
-  if (dvesperadoNum === 11) dvEsperado = '0';
-  else if (dvesperadoNum === 10) dvEsperado = 'K';
-  else dvEsperado = String(dvesperadoNum);
+    const cuerpo = limpio.slice(0, -1);
+    const dvIngresado = limpio.slice(-1);
 
-  return dvIngresado === dvEsperado;
-}
+    if (/^(\d)\1+$/.test(cuerpo)) {
+      return false;
+    }
 
-  /**
-   * Valida formato estándar de correo electrónico
-   */
-private validarCorreo(correo: string): boolean {
-  if (!correo) return false;
-  
-  // Exige caracteres válidos antes del @ y que finalice exactamente en @gmail.com
-  const regex = /^[a-zA-Z0-9._%+-]+@gmail\.com$/i;
-  
-  return regex.test(correo.trim());
-}
-onCorreoBlur(modo: 'nuevo' | 'editar' = 'nuevo') {
-  const target = modo === 'nuevo' ? this.nuevoAlumno : this.alumnoSeleccionado;
-  if (!target || !target.correo) return;
+    let suma = 0;
+    let multiplicador = 2;
 
-  let correoLimpio = target.correo.trim();
+    for (let i = cuerpo.length - 1; i >= 0; i--) {
+      suma += Number(cuerpo.charAt(i)) * multiplicador;
+      multiplicador = multiplicador === 7 ? 2 : multiplicador + 1;
+    }
 
-  // Si escribió por ejemplo 'juan.perez' sin el '@', le concatenamos '@gmail.com'
-  if (correoLimpio && !correoLimpio.includes('@')) {
-    target.correo = `${correoLimpio}@gmail.com`;
+    const dvesperadoNum = 11 - (suma % 11);
+    let dvEsperado = '';
+
+    if (dvesperadoNum === 11) dvEsperado = '0';
+    else if (dvesperadoNum === 10) dvEsperado = 'K';
+    else dvEsperado = String(dvesperadoNum);
+
+    return dvIngresado === dvEsperado;
   }
-}
 
-  /**
-   * Valida que el teléfono tenga exactamente 9 dígitos en formato chileno
-   */
+  onTelefonoInput(event: any, modo: 'nuevo' | 'editar' = 'nuevo') {
+    let valor = String(event.target.value || '').replace(/\D/g, '');
+
+    if (!valor) {
+      this.errores.telefono = '';
+      if (modo === 'nuevo') this.nuevoAlumno.telefono = '';
+      else if (this.alumnoSeleccionado) this.alumnoSeleccionado.telefono = '';
+      return;
+    }
+
+    if (!valor.startsWith('9')) {
+      valor = '9' + valor;
+    }
+
+    if (valor.length > 9) {
+      valor = valor.slice(0, 9);
+    }
+
+    if (modo === 'nuevo') {
+      this.nuevoAlumno.telefono = valor;
+    } else if (this.alumnoSeleccionado) {
+      this.alumnoSeleccionado.telefono = valor;
+    }
+
+    if (event.target) {
+      event.target.value = valor;
+    }
+
+    if (valor.length !== 9) {
+      this.errores.telefono = 'El teléfono debe tener exactamente 9 dígitos e iniciar con 9';
+    } else {
+      this.errores.telefono = '';
+    }
+  }
+
   private validarTelefonoChileno(telefono: any): boolean {
-    if (!telefono) return true; // Es opcional, pero si viene debe cumplir
+    if (!telefono) return false;
     const numStr = String(telefono).replace(/\D/g, '');
-    return numStr.length === 9;
+    return numStr.length === 9 && numStr.startsWith('9');
   }
 
-  /**
-   * Valida que la fecha de nacimiento corresponda a una edad de al menos 17 o 18 años
-   */
+  private validarCorreo(correo: string): boolean {
+    if (!correo) return false;
+    const regex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+    return regex.test(correo.trim());
+  }
+
+  private esCorreoDuplicado(correo: string, rutActual: string = ''): boolean {
+    if (!correo || !Array.isArray(this.alumnos)) return false;
+    
+    const correoLimpio = correo.trim().toLowerCase();
+    const rutLimpio = rutActual.replace(/[^0-9kK]/g, '').toUpperCase();
+
+    return this.alumnos.some(alu => {
+      const correoExistente = String(alu.correo || alu.email || '').trim().toLowerCase();
+      const rutExistente = String(alu.rut_usuario || alu.rut || '').replace(/[^0-9kK]/g, '').toUpperCase();
+
+      if (rutLimpio && rutExistente === rutLimpio) {
+        return false;
+      }
+
+      return correoExistente === correoLimpio;
+    });
+  }
+
+  onCorreoBlur(modo: 'nuevo' | 'editar' = 'nuevo') {
+    const target = modo === 'nuevo' ? this.nuevoAlumno : this.alumnoSeleccionado;
+    if (!target || !target.correo) return;
+
+    let correoLimpio = target.correo.trim();
+
+    if (correoLimpio && !correoLimpio.includes('@')) {
+      correoLimpio = `${correoLimpio}@gmail.com`;
+      target.correo = correoLimpio;
+    }
+
+    if (!this.validarCorreo(target.correo)) {
+      this.errores.correo = 'Ingrese un correo electrónico válido';
+    } else if (this.esCorreoDuplicado(target.correo, target.rut_usuario || '')) {
+      this.errores.correo = 'Este correo electrónico ya se encuentra registrado en el sistema';
+    } else {
+      this.errores.correo = '';
+    }
+  }
+
   private validarEdadMinima(fechaNacimientoStr: string, edadMinima: number = 17): boolean {
-    if (!fechaNacimientoStr) return true; // Opcional si no es obligatorio
+    if (!fechaNacimientoStr) return true;
 
     const fechaNac = new Date(fechaNacimientoStr);
     if (isNaN(fechaNac.getTime())) return false;
@@ -208,7 +306,7 @@ onCorreoBlur(modo: 'nuevo' | 'editar' = 'nuevo') {
   }
 
   // ==========================================
-  // HELPERS Y PROCESAMIENTO DE DATOS
+  // OPERACIONES DE ALUMNOS Y DATOS
   // ==========================================
 
   private extraerArreglo(res: any): any[] {
@@ -297,7 +395,7 @@ onCorreoBlur(modo: 'nuevo' | 'editar' = 'nuevo') {
 
         this.filtrarAlumnos();
       },
-      error: (err) => {
+      error: (err: any) => {
         console.error('Error al cargar alumnos:', err);
         this.mostrarToast('Error al cargar la lista de alumnos', 'danger');
       }
@@ -315,7 +413,7 @@ onCorreoBlur(modo: 'nuevo' | 'editar' = 'nuevo') {
           fecha_mostrar: item.fecha_registro || item.fecha || new Date()
         }));
       },
-      error: (err) => {
+      error: (err: any) => {
         console.error('Error al consultar historial del backend:', err.error || err);
         this.historialAlumno = [];
       }
@@ -325,37 +423,37 @@ onCorreoBlur(modo: 'nuevo' | 'editar' = 'nuevo') {
   obtenerCatalogos() {
     this.alumnoService.getCarreras().subscribe({
       next: (res: any) => { this.carreras = this.extraerArreglo(res); },
-      error: (err) => console.error('Error cargando carreras:', err)
+      error: (err: any) => console.error('Error cargando carreras:', err)
     });
 
     this.alumnoService.getEscuelas().subscribe({ 
       next: (res: any) => { this.escuelas = this.extraerArreglo(res); },
-      error: (err) => console.error('Error cargando escuelas:', err)
+      error: (err: any) => console.error('Error cargando escuelas:', err)
     });
 
     this.alumnoService.getSedes().subscribe({ 
       next: (res: any) => { this.sedes = this.extraerArreglo(res); },
-      error: (err) => console.error('Error cargando sedes:', err)
+      error: (err: any) => console.error('Error cargando sedes:', err)
     });
 
     this.alumnoService.getJornadas().subscribe({ 
       next: (res: any) => { this.jornadas = this.extraerArreglo(res); },
-      error: (err) => console.error('Error cargando jornadas:', err)
+      error: (err: any) => console.error('Error cargando jornadas:', err)
     });
 
     this.alumnoService.getTiposCarrera().subscribe({ 
       next: (res: any) => { this.tiposCarrera = this.extraerArreglo(res); },
-      error: (err) => console.error('Error cargando tipos de carrera:', err)
+      error: (err: any) => console.error('Error cargando tipos de carrera:', err)
     });
 
     this.alumnoService.getEstadosMatricula().subscribe({ 
       next: (res: any) => { this.estadosMatricula = this.extraerArreglo(res); },
-      error: (err) => console.error('Error cargando estados matrícula:', err)
+      error: (err: any) => console.error('Error cargando estados matrícula:', err)
     });
 
     this.alumnoService.getPeriodosAcademicos().subscribe({ 
       next: (res: any) => { this.periodosAcademicos = this.extraerArreglo(res); },
-      error: (err) => console.error('Error cargando periodos:', err)
+      error: (err: any) => console.error('Error cargando periodos:', err)
     });
   }
 
@@ -439,61 +537,48 @@ onCorreoBlur(modo: 'nuevo' | 'editar' = 'nuevo') {
     this.alumnosFiltrados = resultado;
   }
 
-  onFileSelected(event: any) {
-    const file = event.target.files[0];
-    if (file) {
-      this.archivoSeleccionado = file;
-      const reader = new FileReader();
-      reader.onload = () => {
-        this.imagenPreview = reader.result as string;
-      };
-      reader.readAsDataURL(file);
-    }
-  }
-
-  /**
-   * Registro de un nuevo alumno con validaciones estrictas
-   */
   agregarAlumno() {
-    // 1. Campos obligatorios
     if (!this.nuevoAlumno.rut_usuario || !this.nuevoAlumno.nombre_completo || !this.nuevoAlumno.correo) {
-      this.mostrarToast('RUT, Nombre y Correo son obligatorios', 'warning');
+      this.mostrarToast('Los campos RUT, Nombre y Correo son obligatorios', 'warning');
       return;
     }
 
-    // 2. Validación de RUT Chileno
-    if (!this.validarRutChileno(this.nuevoAlumno.rut_usuario)) {
-      this.mostrarToast('El RUT ingresado no es válido (verifique el dígito verificador)', 'danger');
+    if (this.errores.rut || !this.validarRutChileno(this.nuevoAlumno.rut_usuario)) {
+      this.mostrarToast('No se puede crear el registro: El RUT o dígito verificador ingresado no es válido (Módulo 11)', 'danger');
       return;
     }
 
-    // 3. Validación de Correo Electrónico
+    if (!this.validarTelefonoChileno(this.nuevoAlumno.telefono)) {
+      this.mostrarToast('El teléfono debe tener exactamente 9 dígitos e iniciar con 9 (ej: 912345678)', 'warning');
+      return;
+    }
+
     if (!this.validarCorreo(this.nuevoAlumno.correo)) {
-      this.mostrarToast('El correo electrónico ingresado no tiene un formato válido (@gmail.com)', 'danger');
+      this.mostrarToast('El correo electrónico no tiene un formato válido', 'danger');
       return;
     }
 
-    // 4. Validación de Teléfono Chileno
-    if (this.nuevoAlumno.telefono && !this.validarTelefonoChileno(this.nuevoAlumno.telefono)) {
-      this.mostrarToast('El teléfono debe contener exactamente 9 dígitos (ej: 912345678)', 'warning');
+    if (this.esCorreoDuplicado(this.nuevoAlumno.correo)) {
+      this.errores.correo = 'Este correo ya está registrado';
+      this.mostrarToast('El correo electrónico ya pertenece a otro alumno registrado', 'danger');
       return;
     }
 
-    // 5. Validación de Edad Mínima (17 años)
     if (this.nuevoAlumno.fecha_nacimiento && !this.validarEdadMinima(this.nuevoAlumno.fecha_nacimiento, 17)) {
       this.mostrarToast('El alumno debe tener al menos 17 años cumplidos', 'warning');
       return;
     }
 
     const {
-      jornada, tipo_carrera, periodo_academico, id_jornada_carrera, id_tipo_carrera, ...datosValidos
+      jornada, tipo_carrera, periodo_academico, id_jornada_carrera, id_tipo_carrera, imagen, img_usr, ...datosValidos
     } = this.nuevoAlumno;
 
     const payload = {
       ...datosValidos,
+      correo: datosValidos.correo.trim().toLowerCase(),
       fecha_nacimiento: datosValidos.fecha_nacimiento ? datosValidos.fecha_nacimiento : null,
       direccion: datosValidos.direccion ? datosValidos.direccion : null,
-      telefono: datosValidos.telefono ? Number(datosValidos.telefono) : null,
+      telefono: Number(datosValidos.telefono),
       id_carrera: datosValidos.id_carrera ? Number(datosValidos.id_carrera) : null,
       id_escuela: datosValidos.id_escuela ? Number(datosValidos.id_escuela) : null,
       id_sede: datosValidos.id_sede ? Number(datosValidos.id_sede) : 1,
@@ -503,7 +588,8 @@ onCorreoBlur(modo: 'nuevo' | 'editar' = 'nuevo') {
       id_tipo_usuario: 1,
       puntaje_total: Number(datosValidos.puntaje_total || 0),
       actividades_inscritas: Number(datosValidos.actividades_inscritas || 0),
-      historial_academico_resumen: datosValidos.historial_academico_resumen || 'Registro inicial del alumno'
+      historial_academico_resumen: datosValidos.historial_academico_resumen || 'Registro inicial del alumno',
+      img_usr: this.nuevoAlumno.img_usr || ''
     };
 
     this.alumnoService.addAlumno(payload, this.archivoSeleccionado || undefined).subscribe({
@@ -513,10 +599,16 @@ onCorreoBlur(modo: 'nuevo' | 'editar' = 'nuevo') {
         this.resetForm();
         this.obtenerAlumnos();
       },
-      error: (err) => {
+      error: (err: any) => {
         console.error('ERROR DETALLADO:', err.error);
-        const detalle = err.error?.error || 'Error al procesar la solicitud';
-        this.mostrarToast(`Error al guardar: ${detalle}`, 'danger');
+        const detalle = err.error?.error || err.error?.detail || err.error?.message || '';
+
+        if (detalle.toLowerCase().includes('correo') || detalle.toLowerCase().includes('email') || detalle.toLowerCase().includes('unique')) {
+          this.errores.correo = 'Correo ya registrado en la base de datos';
+          this.mostrarToast('Error al guardar: El correo electrónico ya está registrado en el sistema.', 'danger');
+        } else {
+          this.mostrarToast(`Error al guardar: ${detalle || 'Error al procesar la solicitud'}`, 'danger');
+        }
       }
     });
   }
@@ -547,7 +639,7 @@ onCorreoBlur(modo: 'nuevo' | 'editar' = 'nuevo') {
                 this.obtenerAlumnos();
                 this.mostrarToast('Alumno y sus registros fueron eliminados correctamente', 'success');
               },
-              error: (err) => {
+              error: (err: any) => {
                 console.error('Error DELETE:', err);
                 const msg = err?.error?.error || err?.error?.message || 'Error al eliminar alumno';
                 this.mostrarToast(msg, 'danger');
@@ -577,8 +669,14 @@ onCorreoBlur(modo: 'nuevo' | 'editar' = 'nuevo') {
     const tipoUser = this.obtenerTipoUsuario(alumno);
     const esEncargado = [2, 3, 4].includes(tipoUser);
 
+    let telStr = String(alumno.telefono || '').replace(/\D/g, '');
+    if (telStr && !telStr.startsWith('9')) {
+      telStr = '9' + telStr;
+    }
+
     this.alumnoSeleccionado = {
       ...alumno,
+      telefono: telStr,
       id_tipo_usuario: tipoUser,
       id_carrera: alumno.id_carrera || (typeof alumno.carrera === 'object' ? alumno.carrera?.id_carrera : null),
       id_escuela: alumno.id_escuela || historial?.id_escuela || null,
@@ -596,7 +694,8 @@ onCorreoBlur(modo: 'nuevo' | 'editar' = 'nuevo') {
       actividades_a_cargo: esEncargado ? conteoActividades : 0,
       actividades_cargo_count: esEncargado ? conteoActividades : 0,
       actividades_inscritas: !esEncargado ? conteoActividades : (alumno.actividades_inscritas || 0),
-      historial_academico_resumen: ''
+      historial_academico_resumen: '',
+      img_usr: alumno.img_usr || alumno.imagen || ''
     };
 
     this.justificacionEstado = this.alumnoSeleccionado.observacion || '';
@@ -615,16 +714,27 @@ onCorreoBlur(modo: 'nuevo' | 'editar' = 'nuevo') {
 
   async actualizarAlumno() {
     if (!this.alumnoSeleccionado) return;
-    const rut = this.alumnoSeleccionado.rut_usuario;
 
-    // Validaciones al editar
+    const rut = String(this.alumnoSeleccionado.rut_usuario).replace(/\./g, '').trim();
+
+    if (this.errores.rut || !this.validarRutChileno(rut)) {
+      this.mostrarToast('No se puede actualizar: El RUT ingresado no es válido (Módulo 11)', 'danger');
+      return;
+    }
+
     if (!this.validarCorreo(this.alumnoSeleccionado.correo)) {
       this.mostrarToast('El correo electrónico ingresado no es válido', 'danger');
       return;
     }
 
-    if (this.alumnoSeleccionado.telefono && !this.validarTelefonoChileno(this.alumnoSeleccionado.telefono)) {
-      this.mostrarToast('El teléfono debe tener 9 dígitos', 'warning');
+    if (this.esCorreoDuplicado(this.alumnoSeleccionado.correo, rut)) {
+      this.errores.correo = 'Este correo ya pertenece a otro usuario';
+      this.mostrarToast('No se puede actualizar: El correo electrónico pertenece a otro alumno', 'danger');
+      return;
+    }
+
+    if (!this.validarTelefonoChileno(this.alumnoSeleccionado.telefono)) {
+      this.mostrarToast('El teléfono debe tener 9 dígitos e iniciar con 9', 'warning');
       return;
     }
 
@@ -691,13 +801,19 @@ onCorreoBlur(modo: 'nuevo' | 'editar' = 'nuevo') {
         historial_academico, participacion_activa, puntaje_total,
         jornada, tipo_carrera, periodo_academico, id_jornada_carrera, id_tipo_carrera,
         descripcion, historial_academico_resumen, actividades_a_cargo, actividades_cargo_count,
-        ...datosLimpios
+        imagen, img_usr, ...datosLimpios
       } = this.alumnoSeleccionado;
+
+      const valorImagenFinal = this.eliminarFotoFlag 
+        ? null 
+        : (this.alumnoSeleccionado.imagen || this.alumnoSeleccionado.img_usr || null);
 
       const datosTexto = {
         ...datosLimpios,
+        correo: this.alumnoSeleccionado.correo.trim().toLowerCase(),
+        imagen: valorImagenFinal,
         id_tipo_usuario: Number(this.alumnoSeleccionado.id_tipo_usuario || 1),
-        telefono: this.alumnoSeleccionado.telefono ? Number(this.alumnoSeleccionado.telefono) : null,
+        telefono: Number(this.alumnoSeleccionado.telefono),
         id_sede: Number(this.alumnoSeleccionado.id_sede),
         id_comuna: Number(this.alumnoSeleccionado.id_comuna),
         id_estado_matricula: Number(this.alumnoSeleccionado.id_estado_matricula),
@@ -723,8 +839,14 @@ onCorreoBlur(modo: 'nuevo' | 'editar' = 'nuevo') {
 
     } catch (err: any) {
       console.error('Error al actualizar datos del alumno:', err?.error || err);
-      const msg = err?.error?.error || err?.error?.message || 'Error al guardar los cambios del alumno';
-      this.mostrarToast(msg, 'danger');
+      const detalle = err?.error?.error || err?.error?.detail || err?.error?.message || '';
+
+      if (detalle.toLowerCase().includes('correo') || detalle.toLowerCase().includes('email') || detalle.toLowerCase().includes('unique')) {
+        this.errores.correo = 'Correo ya registrado en el sistema';
+        this.mostrarToast('No se puede actualizar: El correo pertenece a otro usuario registrado', 'danger');
+      } else {
+        this.mostrarToast(detalle || 'Error al guardar los cambios del alumno', 'danger');
+      }
     }
   }
 
@@ -736,16 +858,15 @@ onCorreoBlur(modo: 'nuevo' | 'editar' = 'nuevo') {
           this.cargarHistorial(this.alumnoSeleccionado.rut_usuario);
         }
       },
-      error: (err) => {
+      error: (err: any) => {
         console.error('Error al eliminar hito:', err);
         this.mostrarToast('Error al eliminar registro de historial', 'danger');
       }
     });
   }
 
-  limpiarImagenes() {
-    this.archivoSeleccionado = null;
-    this.imagenPreview = null;
+  limpiarErrores() {
+    this.errores = { rut: '', correo: '', telefono: '', fecha_nacimiento: '' };
   }
 
   resetForm() {
@@ -764,7 +885,7 @@ onCorreoBlur(modo: 'nuevo' | 'editar' = 'nuevo') {
       id_jornada_carrera: null,
       id_tipo_carrera: null,
       direccion: '', 
-      telefono: null, 
+      telefono: '', 
       fecha_nacimiento: '',
       id_requisito: null,
       puntaje_total: 0,
@@ -773,11 +894,13 @@ onCorreoBlur(modo: 'nuevo' | 'editar' = 'nuevo') {
       matriculado: true,
       suspension: false,
       sumario: false,
-      observacion: ''
+      observacion: '',
+      img_usr: ''
     };
     this.historialAlumno = [];
     this.estadoPrevio = null;
     this.justificacionEstado = '';
+    this.limpiarErrores();
     this.limpiarImagenes();
   }
 

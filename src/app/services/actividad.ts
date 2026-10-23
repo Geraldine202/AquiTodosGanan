@@ -449,5 +449,8 @@ getResponsablesActivos(): Observable<any[]> {
   // Aseguramos el puerto 3000 que es donde está Express con la ruta /responsables-activos
   return this.http.get<any[]>('http://localhost:3000/responsables-activos');
 }
+ getNivelUsuario(rutOToken: string): Observable<InfoNivelUsuario> {
+    return this.http.get<InfoNivelUsuario>(`${this.apiUrl}/usuarios/nivel/${rutOToken}`);
+  }
 
 }

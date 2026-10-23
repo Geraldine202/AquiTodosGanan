@@ -57,7 +57,7 @@
           <div class="card-cuerpo">
             
             <div class="avatar-container">
-              <img [src]="alu.imagen ? alu.imagen : 'assets/usuario.webp'" alt="Avatar" class="alumno-avatar">
+              <img [src]="alu.img_usr || alu.imagen || 'assets/usuario.webp'" alt="Avatar" class="alumno-avatar">
             </div>
 
             <div class="info-container">
@@ -82,7 +82,7 @@
               <div class="detalles-extra ion-margin-top">
                 <p>
                   <ion-icon name="school-outline"></ion-icon> Carrera: 
-                  <strong>{{ alu.carrera?.nombre_carrera || alu.carrera?.descripcion_carrera }}</strong>
+                  <strong>{{ alu.carrera?.nombre_carrera || alu.carrera?.descripcion_carrera || 'Sin asignar' }}</strong>
                 </p>
                 <p>
                   <ion-icon name="time-outline"></ion-icon> Jornada: 
@@ -95,7 +95,7 @@
                 </p>
                 
                 <!-- Contador de Actividades a Cargo (Solo visible para Consejeros de Carrera) -->
-                <p *ngIf="alu.id_tipo_usuario === 4" color="tertiary">
+                <p *ngIf="alu.id_tipo_usuario === 4">
                   <ion-icon name="clipboard-outline" color="tertiary"></ion-icon> 
                   Actividades a Cargo: <strong style="color: var(--ion-color-tertiary);">{{ alu.actividades_a_cargo || alu.actividades_cargo_count || 0 }}</strong>
                 </p>
@@ -145,29 +145,41 @@
       <ion-content class="modal-content">
         <div class="formulario-modal">
           
+          <!-- Subir / Quitar Foto en Registro -->
           <div class="upload-avatar-section">
             <div class="preview-uploader">
-              <img [src]="imagenPreview ? imagenPreview : 'assets/usuario.webp'" class="preview-img" alt="Previsualización">
+              <img [src]="imagenPreview || 'assets/usuario.webp'" class="preview-img" alt="Previsualización">
             </div>
             <input #fileInputAgregar type="file" accept="image/*" (change)="onFileSelected($event)" style="display: none;">
-            <ion-button fill="outline" size="small" color="secondary" (click)="fileInputAgregar.click()">
-              <ion-icon name="camera-outline" slot="start"></ion-icon>
-              {{ imagenPreview ? 'Cambiar Foto' : 'Subir Foto' }}
-            </ion-button>
+            
+            <div class="upload-buttons">
+              <ion-button fill="outline" size="small" color="secondary" (click)="fileInputAgregar.click()">
+                <ion-icon name="camera-outline" slot="start"></ion-icon>
+                {{ imagenPreview ? 'Cambiar Foto' : 'Subir Foto' }}
+              </ion-button>
+
+              <ion-button *ngIf="imagenPreview" fill="clear" size="small" color="danger" (click)="quitarImagen('nuevo')">
+                <ion-icon name="trash-outline" slot="start"></ion-icon>
+                Quitar Foto
+              </ion-button>
+            </div>
           </div>
 
-          <!-- RUT con formateo en vivo -->
-        <ion-item class="input-modal" lines="none">
-          <ion-input 
-            label="RUT *" 
-            labelPlacement="stacked"
-            type="text" 
-            [(ngModel)]="nuevoAlumno.rut_usuario" 
-            (ionInput)="onRutInput($event)" 
-            placeholder="12.345.678-K"
-            maxlength="12">
-          </ion-input>
-        </ion-item>
+          <!-- RUT con formateo en vivo + Mensaje de error -->
+          <ion-item class="input-modal" lines="none">
+            <ion-input 
+              label="RUT *" 
+              labelPlacement="stacked"
+              type="text" 
+              [(ngModel)]="nuevoAlumno.rut_usuario" 
+              (ionInput)="onRutInput($event, 'nuevo')" 
+              placeholder="12.345.678-K"
+              maxlength="12">
+            </ion-input>
+          </ion-item>
+          <ion-note color="danger" style="display: block; margin: -4px 0 8px 12px; font-size: 0.8rem;" *ngIf="errores.rut">
+            ⚠️ {{ errores.rut }}
+          </ion-note>
 
           <ion-item class="input-modal" lines="none">
             <ion-input label="Nombre completo *" labelPlacement="stacked" [(ngModel)]="nuevoAlumno.nombre_completo" placeholder="Juan Pérez Solís"></ion-input>
@@ -181,17 +193,20 @@
             </ion-select>
           </ion-item>
 
-      <!-- Correo institucional/general -->
-        <ion-item class="input-modal" lines="none">
-          <ion-input 
-            label="Correo Electrónico *" 
-            labelPlacement="stacked" 
-            [(ngModel)]="nuevoAlumno.correo" 
-            (ionBlur)="onCorreoBlur('nuevo')"
-            type="email" 
-            placeholder="alumno@gmail.com">
-          </ion-input>
-        </ion-item>
+          <!-- Correo con validación visual -->
+          <ion-item class="input-modal" lines="none">
+            <ion-input 
+              label="Correo Electrónico *" 
+              labelPlacement="stacked" 
+              [(ngModel)]="nuevoAlumno.correo" 
+              (ionBlur)="onCorreoBlur('nuevo')"
+              type="email" 
+              placeholder="alumno@gmail.com">
+            </ion-input>
+          </ion-item>
+          <ion-note color="danger" style="display: block; margin: -4px 0 8px 12px; font-size: 0.8rem;" *ngIf="errores.correo">
+            ⚠️ {{ errores.correo }}
+          </ion-note>
 
           <!-- Carrera Dinámica -->
           <ion-item class="input-modal" lines="none">
@@ -226,15 +241,18 @@
 
           <!-- Teléfono en formato chileno (9 dígitos) -->
           <ion-item class="input-modal" lines="none">
-            <ion-input label="Teléfono (9 dígitos)" labelPlacement="stacked" [(ngModel)]="nuevoAlumno.telefono" type="tel" maxlength="9" placeholder="912345678"></ion-input>
+            <ion-input label="Teléfono (9 dígitos)" labelPlacement="stacked" [(ngModel)]="nuevoAlumno.telefono" (ionInput)="onTelefonoInput($event, 'nuevo')" type="tel" maxlength="9" placeholder="912345678"></ion-input>
           </ion-item>
+          <ion-note color="danger" style="display: block; margin: -4px 0 8px 12px; font-size: 0.8rem;" *ngIf="errores.telefono">
+            ⚠️ {{ errores.telefono }}
+          </ion-note>
 
-          <!-- Fecha Nacimiento con validación 17+ años -->
+          <!-- Fecha Nacimiento -->
           <ion-item class="input-modal" lines="none">
             <ion-input label="Fecha Nacimiento (Edad ≥ 17 años)" labelPlacement="stacked" [(ngModel)]="nuevoAlumno.fecha_nacimiento" type="date"></ion-input>
           </ion-item>
 
-          <ion-button expand="block" class="btn-guardar-modal" (click)="agregarAlumno()">
+          <ion-button expand="block" class="btn-guardar-modal" (click)="agregarAlumno()" [disabled]="!!errores.rut || !!errores.correo || !!errores.telefono">
             <ion-icon name="checkmark-circle-outline" slot="start"></ion-icon>
             Guardar Alumno
           </ion-button>
@@ -258,30 +276,32 @@
       <ion-content class="modal-content">
         <div class="formulario-modal" *ngIf="alumnoSeleccionado">
           
+          <!-- Subir / Cambiar / Eliminar Foto en Edición -->
           <div class="upload-avatar-section">
             <div class="preview-uploader">
-              <img [src]="imagenPreview ? imagenPreview : (alumnoSeleccionado.imagen ? alumnoSeleccionado.imagen : 'assets/usuario.webp')" class="preview-img" alt="Previsualización">
+              <img [src]="imagenPreview || alumnoSeleccionado.img_usr || alumnoSeleccionado.imagen || 'assets/usuario.webp'" class="preview-img" alt="Previsualización">
             </div>
             <input #fileInputEditar type="file" accept="image/*" (change)="onFileSelected($event)" style="display: none;">
-            <ion-button fill="outline" size="small" color="secondary" (click)="fileInputEditar.click()">
-              <ion-icon name="camera-outline" slot="start"></ion-icon>
-              Cambiar Foto
-            </ion-button>
+            
+            <div class="upload-buttons">
+              <ion-button fill="outline" size="small" color="secondary" (click)="fileInputEditar.click()">
+                <ion-icon name="camera-outline" slot="start"></ion-icon>
+                {{ (imagenPreview || alumnoSeleccionado.img_usr || alumnoSeleccionado.imagen) ? 'Cambiar Foto' : 'Subir Foto' }}
+              </ion-button>
+
+              <ion-button *ngIf="imagenPreview || alumnoSeleccionado.img_usr || alumnoSeleccionado.imagen" fill="clear" size="small" color="danger" (click)="quitarImagen('editar')">
+                <ion-icon name="trash-outline" slot="start"></ion-icon>
+                Eliminar Foto
+              </ion-button>
+            </div>
           </div>
 
           <ion-item class="input-modal" lines="none">
-            <ion-input label="Nombre completo" labelPlacement="stacked" [(ngModel)]="alumnoSeleccionado.nombre_completo"></ion-input>
+            <ion-input label="RUT Usuario" labelPlacement="stacked" [value]="alumnoSeleccionado.rut_usuario" readonly></ion-input>
           </ion-item>
 
           <ion-item class="input-modal" lines="none">
-            <ion-input 
-              label="Correo Electrónico" 
-              labelPlacement="stacked" 
-              [(ngModel)]="alumnoSeleccionado.correo" 
-              (ionBlur)="onCorreoBlur('editar')"
-              type="email" 
-              placeholder="alumno@gmail.com">
-            </ion-input>
+            <ion-input label="Nombre completo" labelPlacement="stacked" [(ngModel)]="alumnoSeleccionado.nombre_completo"></ion-input>
           </ion-item>
 
           <!-- SWITCH CONSEJERO DE CARRERA -->
@@ -355,8 +375,11 @@
           </ion-item>
 
           <ion-item class="input-modal" lines="none">
-            <ion-input label="Teléfono (9 dígitos)" labelPlacement="stacked" [(ngModel)]="alumnoSeleccionado.telefono" type="tel" maxlength="9"></ion-input>
+            <ion-input label="Teléfono (9 dígitos)" labelPlacement="stacked" [(ngModel)]="alumnoSeleccionado.telefono" (ionInput)="onTelefonoInput($event, 'editar')" type="tel" maxlength="9"></ion-input>
           </ion-item>
+          <ion-note color="danger" style="display: block; margin: -4px 0 8px 12px; font-size: 0.8rem;" *ngIf="errores.telefono">
+            ⚠️ {{ errores.telefono }}
+          </ion-note>
 
           <ion-item class="input-modal" lines="none">
             <ion-input label="Fecha Nacimiento" labelPlacement="stacked" [(ngModel)]="alumnoSeleccionado.fecha_nacimiento" type="date"></ion-input>
@@ -375,10 +398,10 @@
                     <ion-icon name="bookmark-outline" color="primary"></ion-icon>
                     {{ h.historial_academico_resumen || h.resumen || h.descripcion || h.observacion || 'Sin detalle' }}
                   </p>
-                    <p style="font-size: 0.75rem; color: var(--ion-color-medium); margin: 0;">
-                      <ion-icon name="time-outline"></ion-icon> 
-                      {{ (h.fecha_mostrar || h.fecha_registro || h.fecha || h.created_at) | date:'dd/MM/yyyy HH:mm' }}
-                    </p>
+                  <p style="font-size: 0.75rem; color: var(--ion-color-medium); margin: 0;">
+                    <ion-icon name="time-outline"></ion-icon> 
+                    {{ (h.fecha_mostrar || h.fecha_registro || h.fecha || h.created_at) | date:'dd/MM/yyyy HH:mm' }}
+                  </p>
                 </ion-card-content>
               </ion-card>
             </div>
@@ -390,7 +413,7 @@
             </ng-template>
           </div>
 
-          <ion-button expand="block" class="btn-guardar-modal ion-margin-top" (click)="actualizarAlumno()">
+          <ion-button expand="block" class="btn-guardar-modal ion-margin-top" (click)="actualizarAlumno()" [disabled]="!!errores.telefono">
             <ion-icon name="save-outline" slot="start"></ion-icon>
             Guardar Cambios
           </ion-button>

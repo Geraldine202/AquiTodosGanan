@@ -22,6 +22,16 @@
         <p>Inicia sesión con tu cuenta de Administrador</p>
       </div>
 
+      <!-- Banner de Bloqueo Temporal (5s) -->
+      <div *ngIf="bloqueadoTemporalmente" class="bloqueo-banner ion-margin-bottom">
+        <ion-text color="danger">
+          <p class="ion-text-center">
+            <strong>Acceso bloqueado por intentos fallidos.</strong><br>
+            Reintenta en <strong>{{ segundosRestantes }}s</strong>
+          </p>
+        </ion-text>
+      </div>
+
       <!-- Formulario de Entrada -->
       <div class="form-container">
         
@@ -33,6 +43,7 @@
             placeholder="correo@gmail.com" 
             label="Correo Institucional" 
             labelPlacement="floating" 
+            [disabled]="bloqueadoTemporalmente"
             [(ngModel)]="credenciales.correo">
           </ion-input>
         </ion-item>
@@ -45,6 +56,7 @@
             placeholder="••••••••" 
             label="Contraseña" 
             labelPlacement="floating" 
+            [disabled]="bloqueadoTemporalmente"
             [(ngModel)]="credenciales.password">
           </ion-input>
           <ion-icon 
@@ -56,14 +68,19 @@
         </ion-item>
 
         <!-- Botón Principal de Ingreso -->
-        <ion-button expand="block" color="primary" class="btn-login-main" (click)="iniciarSesion()">
-          <ion-icon slot="start" name="log-in-outline"></ion-icon>
-          Ingresar al Panel
+        <ion-button 
+          expand="block" 
+          color="primary" 
+          class="btn-login-main" 
+          [disabled]="bloqueadoTemporalmente"
+          (click)="iniciarSesion()">
+          <ion-icon slot="start" [name]="bloqueadoTemporalmente ? 'time-outline' : 'log-in-outline'"></ion-icon>
+          {{ bloqueadoTemporalmente ? 'Bloqueado (' + segundosRestantes + 's)' : 'Ingresar al Panel' }}
         </ion-button>
 
         <!-- Enlace de Recuperación -->
         <div class="login-footer-links">
-          <ion-button fill="clear" routerLink="/recuperar" class="btn-forgot">
+          <ion-button fill="clear" routerLink="/recuperar" class="btn-forgot" [disabled]="bloqueadoTemporalmente">
             ¿Olvidaste tu contraseña administrativa?
           </ion-button>
         </div>

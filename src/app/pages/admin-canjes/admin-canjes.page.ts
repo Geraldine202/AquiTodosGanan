@@ -1,6 +1,8 @@
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { AlertController, ToastController, LoadingController, ViewWillEnter, ViewWillLeave } from '@ionic/angular';
-import { ActividadService, SolicitudCanje } from 'src/app/services/actividad';
+import { ActividadService, SolicitudCanje, InfoNivelUsuario } from 'src/app/services/actividad';
+import { forkJoin, of } from 'rxjs';
+import { catchError } from 'rxjs/operators';
 
 @Component({
   selector: 'app-admin-canjes',
@@ -17,6 +19,8 @@ export class AdminCanjesPage implements OnInit, OnDestroy, ViewWillEnter, ViewWi
   cargando: boolean = false;
 
   private autoRefreshInterval: any = null;
+  // Cache persistente de niveles por RUT para erradicar el parpadeo visual
+  private mapaNivelesCache: { [rut: string]: InfoNivelUsuario } = {};
 
   constructor(
     private actividadService: ActividadService,
@@ -27,17 +31,11 @@ export class AdminCanjesPage implements OnInit, OnDestroy, ViewWillEnter, ViewWi
 
   ngOnInit() { }
 
-  /**
-   * Ciclo de vida Ionic: Se ejecuta automáticamente cada vez que se entra a la vista.
-   */
   ionViewWillEnter() {
     this.cargarSolicitudes();
     this.iniciarAutoRefresh();
   }
 
-  /**
-   * Ciclo de vida Ionic: Detiene la recarga automática cuando el usuario cambia de pantalla.
-   */
   ionViewWillLeave() {
     this.detenerAutoRefresh();
   }
@@ -46,19 +44,18 @@ export class AdminCanjesPage implements OnInit, OnDestroy, ViewWillEnter, ViewWi
     this.detenerAutoRefresh();
   }
 
-  /**
-   * Inicia la actualización automática silenciosa cada 15 segundos.
-   */
+  private limpiarRut(rut: any): string {
+    if (!rut) return '';
+    return String(rut).replace(/[^0-9kK]/g, '').trim();
+  }
+
   private iniciarAutoRefresh() {
     this.detenerAutoRefresh();
     this.autoRefreshInterval = setInterval(() => {
       this.cargarSolicitudes(null, true);
-    }, 15000);
+    }, 20000);
   }
 
-  /**
-   * Limpia el temporizador para no consumir recursos en segundo plano.
-   */
   private detenerAutoRefresh() {
     if (this.autoRefreshInterval) {
       clearInterval(this.autoRefreshInterval);
@@ -73,81 +70,75 @@ export class AdminCanjesPage implements OnInit, OnDestroy, ViewWillEnter, ViewWi
 
     this.actividadService.obtenerCanjes().subscribe({
       next: (data: any[]) => {
-        this.solicitudes = (data || []).map(item => {
-          // 1. Obtener la información del Usuario
-          const usr = Array.isArray(item.usuario) ? item.usuario[0] : item.usuario;
-          const idSedeUsuario = usr?.id_sede ? Number(usr.id_sede) : null;
+        const listaCanjes = data || [];
 
-          // Nombre de la sede del usuario
-          let nombreSedeUsuario = '';
-          if (usr?.sede) {
-            const sObj = Array.isArray(usr.sede) ? usr.sede[0] : usr.sede;
-            nombreSedeUsuario = sObj?.descripcion || '';
-          }
+        if (listaCanjes.length === 0) {
+          this.solicitudes = [];
+          this.aplicarFiltros();
+          this.cargando = false;
+          if (event) event.target.complete();
+          return;
+        }
 
-          // 2. Obtener la información del Nivel del Estudiante
-          const infoNivelAlumno = item.info_nivel_usuario || {
-            id_nivel: 1,
-            nombre_nivel: 'Bronce',
-            total_actividades: 0,
-            faltantes_siguiente: 4
-          };
-
-          // 3. Obtener la información del Premio, su Nivel, Categoría y Stock
-          const premioObj = Array.isArray(item.premio) ? item.premio[0] : item.premio;
-          
-          // Extracción del objeto Nivel del premio
-          const nivelObj = Array.isArray(premioObj?.nivel) ? premioObj.nivel[0] : premioObj?.nivel;
-          const idNivelPremio = premioObj?.id_nivel ? Number(premioObj.id_nivel) : (nivelObj?.id_nivel ? Number(nivelObj.id_nivel) : 1);
-          const nombreNivelPremio = nivelObj?.nombre_nivel || (idNivelPremio === 3 ? 'Platino' : (idNivelPremio === 2 ? 'Oro' : 'Bronce'));
-
-          // Extracción del objeto Categoría del premio
-          const catObj = Array.isArray(premioObj?.categoria_premio) ? premioObj.categoria_premio[0] : premioObj?.categoria_premio;
-
-          // Procesamiento de Stock por Sede
-          let stocks: any[] = premioObj?.stock_sede || [];
-          if (stocks && !Array.isArray(stocks)) {
-            stocks = [stocks];
-          }
-
-          // 4. Buscar el stock real correspondiente a la sede del alumno
-          let stockEncontrado = 0;
-
-          if (Array.isArray(stocks) && stocks.length > 0) {
-            let registro = stocks.find((s: any) => Number(s.id_sede) === idSedeUsuario);
-
-            if (!registro && premioObj?.id_sede && Number(premioObj.id_sede) === idSedeUsuario) {
-              registro = stocks.find((s: any) => Number(s.id_sede) === Number(premioObj.id_sede));
-            }
-
-            if (!registro && stocks.length === 1) {
-              registro = stocks[0];
-            }
-
-            if (registro) {
-              stockEncontrado = Number(registro.cantidad);
-            }
-          }
-
-          return {
-            ...item,
-            usuario: usr,
-            info_nivel_usuario: infoNivelAlumno,
-            premio: {
-              ...premioObj,
-              id_nivel: idNivelPremio,
-              nombre_nivel: nombreNivelPremio,
-              nivel: nivelObj || { id_nivel: idNivelPremio, nombre_nivel: nombreNivelPremio, min_actividades: 0 },
-              categoria_premio: catObj
-            },
-            nombre_sede_alumno: nombreSedeUsuario || 'Puente Alto',
-            stock_sede_alumno: stockEncontrado
-          };
-        });
-
+        // 1. MAPEADO CON NIVELES PERSISTENTES EN CACHÉ (Evita salta/parpadeo a Bronce)
+        this.solicitudes = listaCanjes.map((item) => this.procesarItemCanje(item));
         this.aplicarFiltros();
         this.cargando = false;
         if (event) event.target.complete();
+
+        // 2. OBTENER RUTS ÚNICOS
+        const rutsUnicos = Array.from(new Set(
+          listaCanjes
+            .map(item => {
+              const usr = Array.isArray(item.usuario) ? item.usuario[0] : item.usuario;
+              return this.limpiarRut(item.rut_usuario || usr?.rut_usuario || usr?.rut);
+            })
+            .filter(rut => !!rut)
+        ));
+
+        if (rutsUnicos.length === 0) return;
+
+        // 3. CONSULTAR NIVELES DE FONDO EN PARALELO
+        const peticionesNivel = rutsUnicos.map(rut => 
+          this.actividadService.getNivelUsuario(rut).pipe(
+            catchError(() => of(null))
+          )
+        );
+
+        forkJoin(peticionesNivel).subscribe({
+          next: (nivelesRes: any[]) => {
+            let hubocambios = false;
+
+            rutsUnicos.forEach((rut, idx) => {
+              if (nivelesRes[idx]) {
+                const infoNueva = nivelesRes[idx];
+                const infoAnterior = this.mapaNivelesCache[rut];
+
+                // Verificar si cambió el nivel para actualizar suavemente
+                if (!infoAnterior || infoAnterior.id_nivel !== infoNueva.id_nivel) {
+                  this.mapaNivelesCache[rut] = infoNueva;
+                  hubocambios = true;
+                }
+              }
+            });
+
+            // 4. ACTUALIZACIÓN SILENCIOSA DE UI SOLO SI HUBO CAMBIO REAL DE NIVEL
+            if (hubocambios) {
+              this.solicitudes = this.solicitudes.map(sol => {
+                const rutSol = this.limpiarRut(sol.rut_usuario || sol.usuario?.rut_usuario);
+                if (rutSol && this.mapaNivelesCache[rutSol]) {
+                  const infoReal = this.mapaNivelesCache[rutSol];
+                  const idNivel = Number(infoReal.id_nivel ?? 1);
+                  sol.info_nivel_usuario = infoReal;
+                  (sol as any).color_nivel_alumno = idNivel === 3 ? 'medium' : idNivel === 2 ? 'warning' : 'tertiary';
+                }
+                return sol;
+              });
+
+              this.aplicarFiltros();
+            }
+          }
+        });
       },
       error: (err) => {
         console.error('[ERROR CARGAR CANJES]:', err);
@@ -161,6 +152,84 @@ export class AdminCanjesPage implements OnInit, OnDestroy, ViewWillEnter, ViewWi
     });
   }
 
+  private procesarItemCanje(item: any): SolicitudCanje {
+    const usr = Array.isArray(item.usuario) ? item.usuario[0] : item.usuario;
+    const idSedeUsuario = usr?.id_sede ? Number(usr.id_sede) : null;
+
+    let nombreSedeUsuario = '';
+    if (usr?.sede) {
+      const sObj = Array.isArray(usr.sede) ? usr.sede[0] : usr.sede;
+      nombreSedeUsuario = sObj?.descripcion || '';
+    }
+
+    const rutActual = this.limpiarRut(item.rut_usuario || usr?.rut_usuario || usr?.rut);
+
+    // BÚSQUEDA PRIORITARIA: Usamos primero la caché persistente para mantener el nivel real conocido
+    const infoNivelAlumno: InfoNivelUsuario = 
+      this.mapaNivelesCache[rutActual] ||
+      item.info_nivel_usuario || 
+      {
+        id_nivel: 1,
+        nombre_nivel: 'Bronce',
+        total_actividades: 0,
+        faltantes_siguiente: 4
+      };
+
+    // Almacenar en la caché si no existía
+    if (rutActual && item.info_nivel_usuario) {
+      this.mapaNivelesCache[rutActual] = item.info_nivel_usuario;
+    }
+
+    const idNivelAlumno = Number(infoNivelAlumno.id_nivel ?? 1);
+    const colorNivelAlumno = idNivelAlumno === 3 ? 'medium' : idNivelAlumno === 2 ? 'warning' : 'tertiary';
+
+    const premioObj = Array.isArray(item.premio) ? item.premio[0] : item.premio;
+    const nivelObj = Array.isArray(premioObj?.nivel) ? premioObj.nivel[0] : premioObj?.nivel;
+    
+    const idNivelPremio = premioObj?.id_nivel ? Number(premioObj.id_nivel) : (nivelObj?.id_nivel ? Number(nivelObj.id_nivel) : 1);
+    const nombreNivelPremio = nivelObj?.nombre_nivel || (idNivelPremio === 3 ? 'Platino' : (idNivelPremio === 2 ? 'Oro' : 'Bronce'));
+
+    const catObj = Array.isArray(premioObj?.categoria_premio) ? premioObj.categoria_premio[0] : premioObj?.categoria_premio;
+
+    let stocks: any[] = premioObj?.stock_sede || [];
+    if (stocks && !Array.isArray(stocks)) {
+      stocks = [stocks];
+    }
+
+    let stockEncontrado = 0;
+    if (Array.isArray(stocks) && stocks.length > 0) {
+      let registro = stocks.find((s: any) => Number(s.id_sede) === idSedeUsuario);
+
+      if (!registro && premioObj?.id_sede && Number(premioObj.id_sede) === idSedeUsuario) {
+        registro = stocks.find((s: any) => Number(s.id_sede) === Number(premioObj.id_sede));
+      }
+
+      if (!registro && stocks.length === 1) {
+        registro = stocks[0];
+      }
+
+      if (registro) {
+        stockEncontrado = Number(registro.cantidad);
+      }
+    }
+
+    return {
+      ...item,
+      usuario: usr,
+      info_nivel_usuario: infoNivelAlumno,
+      color_nivel_alumno: colorNivelAlumno,
+      premio: {
+        ...premioObj,
+        id_nivel: idNivelPremio,
+        nombre_nivel: nombreNivelPremio,
+        nivel: nivelObj || { id_nivel: idNivelPremio, nombre_nivel: nombreNivelPremio, min_actividades: 0 },
+        categoria_premio: catObj
+      },
+      nombre_sede_alumno: nombreSedeUsuario || 'Puente Alto',
+      stock_sede_alumno: stockEncontrado
+    };
+  }
+
   aplicarFiltros() {
     this.solicitudesFiltradas = this.solicitudes.filter(item => {
       const cumpleEstado = this.filtroEstado === 'todos' || item.id_estado_canje === Number(this.filtroEstado);
@@ -168,7 +237,8 @@ export class AdminCanjesPage implements OnInit, OnDestroy, ViewWillEnter, ViewWi
       
       const nombreAlumno = item.usuario?.nombre_completo ? item.usuario.nombre_completo.toLowerCase() : '';
       const descripcionPremio = item.premio?.descripcion ? item.premio.descripcion.toLowerCase() : '';
-      const nombreNivel = item.premio?.nombre_nivel ? item.premio.nombre_nivel.toLowerCase() : '';
+      const nombreNivelPremio = item.premio?.nombre_nivel ? item.premio.nombre_nivel.toLowerCase() : '';
+      const nombreNivelAlumno = item.info_nivel_usuario?.nombre_nivel ? item.info_nivel_usuario.nombre_nivel.toLowerCase() : '';
       const rut = item.rut_usuario ? item.rut_usuario.toLowerCase() : '';
 
       return cumpleEstado && (
@@ -176,12 +246,12 @@ export class AdminCanjesPage implements OnInit, OnDestroy, ViewWillEnter, ViewWi
         rut.includes(termino) || 
         nombreAlumno.includes(termino) || 
         descripcionPremio.includes(termino) ||
-        nombreNivel.includes(termino)
+        nombreNivelPremio.includes(termino) ||
+        nombreNivelAlumno.includes(termino)
       );
     });
   }
 
-  // Acciones: Aprobar Solicitud (1 -> 2)
   async aprobarCanje(item: SolicitudCanje) {
     const nivelPremio = item.premio?.nombre_nivel || 'Bronce';
     const alert = await this.alertController.create({
@@ -195,7 +265,7 @@ export class AdminCanjesPage implements OnInit, OnDestroy, ViewWillEnter, ViewWi
             this.ejecutarAccion(
               this.actividadService.aprobarCanje(item.id_canje),
               item,
-              2 // Estado Aprobado
+              2
             );
           }
         }
@@ -204,7 +274,6 @@ export class AdminCanjesPage implements OnInit, OnDestroy, ViewWillEnter, ViewWi
     await alert.present();
   }
 
-  // Acciones: Confirmar Entrega Presencial (2 -> 3)
   async marcarComoRetirado(item: SolicitudCanje) {
     const alert = await this.alertController.create({
       header: 'Confirmar Entrega Presencial',
@@ -217,7 +286,7 @@ export class AdminCanjesPage implements OnInit, OnDestroy, ViewWillEnter, ViewWi
             this.ejecutarAccion(
               this.actividadService.marcarComoRetirado(item.id_canje),
               item,
-              3 // Estado Retirado
+              3
             );
           }
         }
@@ -226,7 +295,6 @@ export class AdminCanjesPage implements OnInit, OnDestroy, ViewWillEnter, ViewWi
     await alert.present();
   }
 
-  // Acciones: Rechazar o Cancelar (1 u 2 -> 4)
   async cancelarPorStock(item: SolicitudCanje) {
     const esSolicitudPendiente = item.id_estado_canje === 1;
     
@@ -246,7 +314,7 @@ export class AdminCanjesPage implements OnInit, OnDestroy, ViewWillEnter, ViewWi
             this.ejecutarAccion(
               this.actividadService.cancelarPorStock(item.id_canje),
               item,
-              4 // Estado Cancelado / Rechazado
+              4
             );
           }
         }
@@ -255,10 +323,6 @@ export class AdminCanjesPage implements OnInit, OnDestroy, ViewWillEnter, ViewWi
     await alert.present();
   }
 
-  /**
-   * Ejecuta la petición al servidor e impacta la lista LOCAL al instante
-   * para evitar latencias de renderizado.
-   */
   private async ejecutarAccion(peticion$: any, itemAfectado: SolicitudCanje, nuevoEstadoId: number) {
     const loader = await this.loadingController.create({ message: 'Procesando...' });
     await loader.present();
@@ -267,25 +331,18 @@ export class AdminCanjesPage implements OnInit, OnDestroy, ViewWillEnter, ViewWi
       next: (res: any) => {
         loader.dismiss();
         
-        // 1. Actualización local instantánea
         itemAfectado.id_estado_canje = nuevoEstadoId;
 
-        // Descontar stock localmente si pasa a aprobado
         if (nuevoEstadoId === 2 && itemAfectado.stock_sede_alumno !== undefined && itemAfectado.stock_sede_alumno > 0) {
           itemAfectado.stock_sede_alumno -= 1;
         }
 
-        // Reincorporar stock localmente si se cancela una aprobada
         if (nuevoEstadoId === 4 && itemAfectado.stock_sede_alumno !== undefined) {
           itemAfectado.stock_sede_alumno += 1;
         }
 
-        // 2. Refrescar filtros para que desaparezca o cambie de estado inmediatamente
         this.aplicarFiltros();
-        
         this.mostrarToast(res.message || 'Operación realizada con éxito', 'success');
-
-        // 3. Re-sincronizar de fondo sin bloquear al usuario
         this.cargarSolicitudes(null, true);
       },
       error: (err: any) => {

@@ -19,6 +19,14 @@ export class LoginPage implements OnInit, ViewWillEnter {
 
   mostrarPassword: boolean = false;
 
+  // Lógica para Intentos Máximos y Bloqueo
+  intentosFallidos: number = 0;
+  maxIntentos: number = 3;
+  bloqueadoTemporalmente: boolean = false;
+  segundosRestantes: number = 0;
+  private timerBloqueo: any = null;
+  private ultimoCorreoIntento: string = '';
+
   constructor(
     private alumnoService: AlumnoService,
     private router: Router,
@@ -30,8 +38,8 @@ export class LoginPage implements OnInit, ViewWillEnter {
   ngOnInit() { }
 
   /**
-   * Al entrar a la página de login administrativo, fuerza la desautenticación limpia
-   * para asegurar que NINGÚN usuario quede precargado sin ingresar credenciales reales.
+   * Al entrar a la página de login, fuerza la desautenticación limpia
+   * borrando sessionStorage y localStorage para evitar datos residuales.
    */
   ionViewWillEnter() {
     this.limpiarSesion();
@@ -40,7 +48,9 @@ export class LoginPage implements OnInit, ViewWillEnter {
   private limpiarSesion() {
     localStorage.clear();
     sessionStorage.clear();
+    this.alumnoService.cerrarSesion();
     this.credenciales = { correo: '', password: '' };
+    this.mostrarPassword = false;
   }
 
   toggleMostrarPassword() {
@@ -48,9 +58,26 @@ export class LoginPage implements OnInit, ViewWillEnter {
   }
 
   async iniciarSesion() {
-    if (!this.credenciales.correo.trim() || !this.credenciales.password.trim()) {
+    if (this.bloqueadoTemporalmente) {
+      this.mostrarAlerta(
+        'Acceso Bloqueado', 
+        `Has superado el límite de intentos. Por favor espera ${this.segundosRestantes} segundos antes de reintentar.`
+      );
+      return;
+    }
+
+    const correoLimpio = this.credenciales.correo.trim().toLowerCase();
+    const passLimpia = this.credenciales.password.trim();
+
+    if (!correoLimpio || !passLimpia) {
       this.mostrarAlerta('Campos Vacíos', 'Por favor, ingresa tu correo institucional y contraseña de Administrador.');
       return;
+    }
+
+    // Reiniciar contador si el correo de intento cambia
+    if (this.ultimoCorreoIntento !== correoLimpio) {
+      this.intentosFallidos = 0;
+      this.ultimoCorreoIntento = correoLimpio;
     }
 
     const loading = await this.loadingController.create({
@@ -59,10 +86,13 @@ export class LoginPage implements OnInit, ViewWillEnter {
     });
     await loading.present();
 
-    this.alumnoService.login(this.credenciales).subscribe({
+    this.alumnoService.login({ correo: correoLimpio, password: passLimpia }).subscribe({
       next: async (res: any) => {
         await loading.dismiss();
         
+        // Éxito: reiniciar contador de fallos
+        this.intentosFallidos = 0;
+
         const usuario = res.usuario;
         const rol = Number(usuario?.id_tipo_usuario);
 
@@ -70,7 +100,6 @@ export class LoginPage implements OnInit, ViewWillEnter {
         // CONTROL DE ACCESO EXCLUSIVO PARA ADMINISTRADORES (id_tipo_usuario === 2)
         // =========================================================================
         if (rol !== 2) {
-          // Si el usuario es Alumno (1) o Docente (3), no se le permite ingresar a esta plataforma
           this.limpiarSesion();
           this.mostrarAlerta(
             'Acceso Restringido', 
@@ -79,33 +108,72 @@ export class LoginPage implements OnInit, ViewWillEnter {
           return;
         }
 
-        // Si es Administrador (rol === 2), guardar sesión y token limpio
+        // Limpiar almacenamiento antes de establecer nueva sesión activa
         localStorage.clear();
         sessionStorage.clear();
 
+        // GUARDAR ÚNICAMENTE EN sessionStorage PARA EXPIRAR AL CERRAR PESTAÑA
         if (usuario && usuario.rut_usuario) {
-          localStorage.setItem('rut_usuario', usuario.rut_usuario);
-          localStorage.setItem('usuario', JSON.stringify(usuario));
-          localStorage.setItem('usuarioLogueado', JSON.stringify(usuario));
-          localStorage.setItem('usuario_actual', JSON.stringify(usuario));
+          sessionStorage.setItem('rut_usuario', usuario.rut_usuario);
+          sessionStorage.setItem('usuario', JSON.stringify(usuario));
+          sessionStorage.setItem('usuarioLogueado', JSON.stringify(usuario));
+          sessionStorage.setItem('usuario_actual', JSON.stringify(usuario));
         }
         
         if (res.token_acceso) {
-          localStorage.setItem('token_acceso', res.token_acceso);
+          sessionStorage.setItem('token_acceso', res.token_acceso);
         }
 
+        // Notificar al servicio la nueva sesión activa
         this.alumnoService.guardarSesion(usuario);
 
-        // Redireccionar al panel/home de administración
-        this.navCtrl.navigateRoot('/home');
+        // Validar si requiere cambio obligatorio de contraseña en el primer ingreso
+        if (usuario.cambio_clave_obligatorio) {
+          this.navCtrl.navigateRoot('/cambiar-clave-primer-login');
+        } else {
+          this.navCtrl.navigateRoot('/home');
+        }
       },
       error: async (err: any) => {
         await loading.dismiss();
         console.error('Error de autenticación:', err);
-        const mensajeError = err.error?.error || 'Credenciales administrativas incorrectas.';
-        this.mostrarAlerta('Error de Acceso', mensajeError);
+
+        this.intentosFallidos++;
+        const mensajeError = err.error?.error || err.error?.detail || 'Credenciales administrativas incorrectas.';
+
+        if (this.intentosFallidos >= this.maxIntentos) {
+          this.iniciarBloqueoTemporal();
+          this.mostrarAlerta(
+            'Acceso Bloqueado Temporalmente', 
+            `Has fallado ${this.maxIntentos} intentos consecutivos. Por seguridad, la interfaz de administración ha sido bloqueada por 5 segundos.`
+          );
+        } else {
+          const restantes = this.maxIntentos - this.intentosFallidos;
+          this.mostrarAlerta(
+            'Error de Acceso', 
+            `${mensajeError}\n\nTe quedan ${restantes} intento(s) antes del bloqueo temporal.`
+          );
+        }
       }
     });
+  }
+
+  private iniciarBloqueoTemporal() {
+    this.bloqueadoTemporalmente = true;
+    this.segundosRestantes = 5;
+
+    if (this.timerBloqueo) {
+      clearInterval(this.timerBloqueo);
+    }
+
+    this.timerBloqueo = setInterval(() => {
+      this.segundosRestantes--;
+      if (this.segundosRestantes <= 0) {
+        clearInterval(this.timerBloqueo);
+        this.bloqueadoTemporalmente = false;
+        this.intentosFallidos = 0;
+      }
+    }, 1000);
   }
 
   async mostrarAlerta(header: string, message: string) {

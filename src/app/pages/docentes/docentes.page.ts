@@ -1,4 +1,4 @@
-import { Component, OnInit, ViewChild } from '@angular/core';
+import { Component, OnInit, ViewChild, ElementRef } from '@angular/core';
 import { AlumnoService } from 'src/app/services/alumno';
 import { AlertController, ToastController, IonModal, ViewWillEnter } from '@ionic/angular';
 import { firstValueFrom } from 'rxjs';
@@ -12,6 +12,7 @@ import { firstValueFrom } from 'rxjs';
 export class DocentesPage implements OnInit, ViewWillEnter {
   @ViewChild('modalAgregar') modalAgregar!: IonModal;
   @ViewChild('modalEditar') modalEditar!: IonModal;
+  @ViewChild('fileInputAdd') fileInputAdd!: ElementRef<HTMLInputElement>;
 
   docentes: any[] = [];
   docentesFiltrados: any[] = [];
@@ -20,16 +21,15 @@ export class DocentesPage implements OnInit, ViewWillEnter {
   nuevoDocente = {
     nombre_completo: '',
     rut_usuario: '',
-    genero: 'Masculino',
+    genero: '',
     correo: '',
     telefono: '',
     fecha_nacimiento: '',
-    direccion: 'Sin especificar',
+    direccion: '',
     id_sede: null,
     id_tipo_usuario: 3
   };
 
-  // Mensajes de error específicos para feedback visual
   errores = {
     nombre: '',
     rut: '',
@@ -38,6 +38,7 @@ export class DocentesPage implements OnInit, ViewWillEnter {
     fecha_nacimiento: ''
   };
 
+  // Solo se requiere para el registro
   archivoSeleccionado: File | null = null;
   imagenPreview: string | null = null;
 
@@ -59,18 +60,17 @@ export class DocentesPage implements OnInit, ViewWillEnter {
   }
 
   // ==========================================
-  // VALIDACIONES Y MENSAJES DE ERROR EN VIVO
+  // VALIDACIONES Y CONTROL DE ENTRADA
   // ==========================================
 
-  /**
-   * Valida que el nombre contenga solo letras y espacios
-   */
   onNombreInput(event: any, modo: 'nuevo' | 'editar') {
     const valorOriginal = event.target.value || '';
     const soloTexto = valorOriginal.replace(/[^a-zA-ZáéíóúÁÉÍÓÚñÑ\s]/g, '');
 
     if (valorOriginal !== soloTexto) {
       this.errores.nombre = 'Solo se permiten letras y espacios en el nombre';
+    } else if (soloTexto.trim().length < 3 && soloTexto.trim().length > 0) {
+      this.errores.nombre = 'El nombre debe contener al menos 3 caracteres';
     } else {
       this.errores.nombre = '';
     }
@@ -82,9 +82,6 @@ export class DocentesPage implements OnInit, ViewWillEnter {
     }
   }
 
-  /**
-   * Formatea el RUT en vivo con puntos y guion (XX.XXX.XXX-X)
-   */
   private formatearRutChile(rut: string): string {
     if (!rut) return '';
     const limpio = rut.replace(/[^0-9kK]/g, '').toUpperCase();
@@ -98,9 +95,6 @@ export class DocentesPage implements OnInit, ViewWillEnter {
     return `${cuerpoFormateado}-${dv}`;
   }
 
-  /**
-   * Evento input para formatear RUT y limitar extensión
-   */
   onRutInput(event: any, modo: 'nuevo' | 'editar') {
     let valorOriginal = event.target.value || '';
     const limpio = valorOriginal.replace(/[^0-9kK]/g, '').toUpperCase();
@@ -115,7 +109,7 @@ export class DocentesPage implements OnInit, ViewWillEnter {
     }
 
     if (acotado.length >= 8) {
-      if (!this.validarRutChileno(rutFormateado)) {
+      if (!this.validarRutChileno(acotado)) {
         this.errores.rut = 'El RUT o dígito verificador no es válido (Módulo 11)';
       } else {
         this.errores.rut = '';
@@ -128,15 +122,20 @@ export class DocentesPage implements OnInit, ViewWillEnter {
   }
 
   /**
-   * Algoritmo Módulo 11 para RUT
+   * Validador estricto de RUT Chileno (Módulo 11)
    */
-  private validarRutChileno(rut: string): boolean {
-    if (!rut) return false;
-    const limpio = rut.replace(/[^0-9kK]/g, '').toUpperCase();
-    if (limpio.length < 8) return false;
+  private validarRutChileno(rutLimpio: string): boolean {
+    if (!rutLimpio) return false;
+    const limpio = rutLimpio.replace(/[^0-9kK]/g, '').toUpperCase();
+    if (limpio.length < 8 || limpio.length > 9) return false;
 
     const cuerpo = limpio.slice(0, -1);
     const dvIngresado = limpio.slice(-1);
+
+    // Evitar patrones inválidos con dígitos repetidos (ej. 33333333-3)
+    if (/^(\d)\1+$/.test(cuerpo)) {
+      return false;
+    }
 
     let suma = 0;
     let multiplicador = 2;
@@ -156,17 +155,17 @@ export class DocentesPage implements OnInit, ViewWillEnter {
     return dvIngresado === dvEsperado;
   }
 
-  /**
-   * Formatea teléfono chileno (9 dígitos iniciando con 9)
-   */
   onTelefonoInput(event: any, modo: 'nuevo' | 'editar') {
     let valor = String(event.target.value || '').replace(/\D/g, '');
+    
     if (!valor) {
       this.errores.telefono = '';
+      if (modo === 'nuevo') this.nuevoDocente.telefono = '';
+      else if (this.docenteSeleccionado) this.docenteSeleccionado.telefono = '';
       return;
     }
 
-    if (valor.length === 8 && !valor.startsWith('9')) {
+    if (!valor.startsWith('9')) {
       valor = '9' + valor;
     }
 
@@ -180,16 +179,13 @@ export class DocentesPage implements OnInit, ViewWillEnter {
       this.docenteSeleccionado.telefono = valor;
     }
 
-    if (valor.length !== 9 || !valor.startsWith('9')) {
-      this.errores.telefono = 'El teléfono debe tener exactamente 9 dígitos e iniciar con 9';
+    if (valor.length !== 9) {
+      this.errores.telefono = 'El teléfono debe tener exactamente 9 dígitos';
     } else {
       this.errores.telefono = '';
     }
   }
 
-  /**
-   * Autocompleta @gmail.com si no se especificó un dominio
-   */
   onCorreoBlur(modo: 'nuevo' | 'editar') {
     const target = modo === 'nuevo' ? this.nuevoDocente : this.docenteSeleccionado;
     if (!target || !target.correo) {
@@ -215,9 +211,6 @@ export class DocentesPage implements OnInit, ViewWillEnter {
     return regex.test(correo.trim());
   }
 
-  /**
-   * Valida la edad mínima para docentes (18 años)
-   */
   onFechaNacimientoChange(event: any) {
     const fechaStr = event.target.value;
     if (!fechaStr) {
@@ -226,7 +219,7 @@ export class DocentesPage implements OnInit, ViewWillEnter {
     }
 
     if (!this.validarMayorEdad(fechaStr)) {
-      this.errores.fecha_nacimiento = 'El docente debe ser mayor de edad (al menos 18 años cumplidos)';
+      this.errores.fecha_nacimiento = 'El docente debe ser mayor de edad (mínimo 18 años)';
     } else {
       this.errores.fecha_nacimiento = '';
     }
@@ -250,7 +243,31 @@ export class DocentesPage implements OnInit, ViewWillEnter {
   }
 
   // ==========================================
-  // OPERACIONES DE GUARDADO Y EDICIÓN
+  // SELECCIÓN Y ELIMINACIÓN DE IMAGEN (SOLO AL AGREGAR)
+  // ==========================================
+
+  onFileSelected(event: any) {
+    const file = event.target.files[0];
+    if (file) {
+      this.archivoSeleccionado = file;
+      const reader = new FileReader();
+      reader.onload = () => {
+        this.imagenPreview = reader.result as string;
+      };
+      reader.readAsDataURL(file);
+    }
+  }
+
+  quitarImagenAgregar() {
+    this.archivoSeleccionado = null;
+    this.imagenPreview = null;
+    if (this.fileInputAdd) {
+      this.fileInputAdd.nativeElement.value = '';
+    }
+  }
+
+  // ==========================================
+  // OPERACIONES Y GUARDADO
   // ==========================================
 
   extraerArreglo(res: any): any[] {
@@ -264,7 +281,7 @@ export class DocentesPage implements OnInit, ViewWillEnter {
   obtenerCatalogos() {
     this.alumnoService.getSedes().subscribe({
       next: (res: any) => { this.sedes = this.extraerArreglo(res); },
-      error: (err) => console.error('Error al cargar sedes:', err)
+      error: (err: any) => console.error('Error al cargar sedes:', err)
     });
   }
 
@@ -272,7 +289,36 @@ export class DocentesPage implements OnInit, ViewWillEnter {
     this.cargando = true;
     this.alumnoService.getDocentes().subscribe({
       next: (res: any) => {
-        this.docentes = this.extraerArreglo(res);
+        const listaOriginal = this.extraerArreglo(res);
+
+        const primerElem = listaOriginal[0] || {};
+        const tieneIdOFecha = Boolean(
+          primerElem.id_docente || 
+          primerElem.id_usuario || 
+          primerElem.id_persona || 
+          primerElem.id || 
+          primerElem.created_at || 
+          primerElem.fecha_registro
+        );
+
+        if (tieneIdOFecha) {
+          this.docentes = [...listaOriginal].sort((a: any, b: any) => {
+            const fechaA = new Date(a.created_at || a.fecha_registro || 0).getTime();
+            const fechaB = new Date(b.created_at || b.fecha_registro || 0).getTime();
+
+            if (fechaA !== fechaB) {
+              return fechaB - fechaA;
+            }
+
+            const idA = Number(a.id_docente ?? a.id_usuario ?? a.id_persona ?? a.id ?? 0);
+            const idB = Number(b.id_docente ?? b.id_usuario ?? b.id_persona ?? b.id ?? 0);
+
+            return idB - idA;
+          });
+        } else {
+          this.docentes = [...listaOriginal].reverse();
+        }
+
         this.filtrarDocentes();
         this.cargando = false;
       },
@@ -301,40 +347,36 @@ export class DocentesPage implements OnInit, ViewWillEnter {
     });
   }
 
-  onFileSelected(event: any) {
-    const file = event.target.files[0];
-    if (file) {
-      this.archivoSeleccionado = file;
-      const reader = new FileReader();
-      reader.onload = () => {
-        this.imagenPreview = reader.result as string;
-      };
-      reader.readAsDataURL(file);
-    }
-  }
-
   agregarDocente() {
     const { nombre_completo, rut_usuario, genero, correo, telefono, fecha_nacimiento, direccion, id_sede } = this.nuevoDocente;
 
-    // Validaciones estrictas con mensajes descriptivos
-    if (!nombre_completo || !rut_usuario || !correo || !id_sede) {
-      this.mostrarToast('Los campos Nombre, RUT, Correo y Sede son obligatorios', 'warning');
+    if (!nombre_completo.trim() || !rut_usuario.trim() || !correo.trim() || !genero || !id_sede) {
+      this.mostrarToast('Los campos Nombre, RUT, Correo, Género y Sede son obligatorios', 'warning');
       return;
     }
 
-    if (!this.validarRutChileno(rut_usuario)) {
-      this.mostrarToast('El RUT ingresado no es válido. Solo se permiten RUTs chilenos reales.', 'danger');
+    if (nombre_completo.trim().length < 3) {
+      this.mostrarToast('El nombre debe contener al menos 3 caracteres', 'warning');
+      return;
+    }
+
+    if (this.errores.rut || !this.validarRutChileno(rut_usuario)) {
+      this.mostrarToast('El RUT ingresado no es válido. Verifique número y dígito verificador.', 'danger');
       return;
     }
 
     if (!this.validarCorreo(correo)) {
-      this.mostrarToast('El correo no tiene un formato válido (debe incluir @)', 'danger');
+      this.mostrarToast('El correo no tiene un formato válido (ej: usuario@gmail.com)', 'danger');
       return;
     }
 
-    if (telefono && (telefono.length !== 9 || !telefono.startsWith('9'))) {
-      this.mostrarToast('El teléfono debe tener exactamente 9 dígitos e iniciar con 9', 'warning');
-      return;
+    let telSanear = String(telefono || '').replace(/\D/g, '');
+    if (telSanear) {
+      if (!telSanear.startsWith('9')) telSanear = '9' + telSanear;
+      if (telSanear.length !== 9) {
+        this.mostrarToast('El teléfono debe tener exactamente 9 dígitos e iniciar con 9', 'warning');
+        return;
+      }
     }
 
     if (fecha_nacimiento && !this.validarMayorEdad(fecha_nacimiento)) {
@@ -343,13 +385,13 @@ export class DocentesPage implements OnInit, ViewWillEnter {
     }
 
     const payload: any = {
-      nombre_completo,
-      rut_usuario,
-      genero: genero || 'Masculino',
-      correo,
-      telefono: telefono || 'Sin especificar',
+      nombre_completo: nombre_completo.trim(),
+      rut_usuario: rut_usuario.trim(),
+      genero: genero,
+      correo: correo.trim(),
+      telefono: telSanear || '',
       fecha_nacimiento: fecha_nacimiento || null,
-      direccion: direccion || 'Sin especificar',
+      direccion: direccion ? direccion.trim() : '',
       id_sede: Number(id_sede),
       id_tipo_usuario: 3
     };
@@ -361,7 +403,7 @@ export class DocentesPage implements OnInit, ViewWillEnter {
         this.resetForm();
         this.obtenerDocentes();
       },
-      error: (err) => {
+      error: (err: any) => {
         console.error('Error al registrar docente:', err);
         const detalle = err.error?.error || err.error?.message || 'Error al procesar la solicitud';
         this.mostrarToast(`Error: ${detalle}`, 'danger');
@@ -370,10 +412,22 @@ export class DocentesPage implements OnInit, ViewWillEnter {
   }
 
   prepararEdicion(docente: any) {
+    let telString = String(docente.telefono || '').replace(/\D/g, '');
+    
+    if (telString && !telString.startsWith('9')) {
+      telString = '9' + telString;
+    }
+
+    const dirLimpia = (docente.direccion && docente.direccion !== 'Sin especificar') ? docente.direccion : '';
+
     this.docenteSeleccionado = {
       ...docente,
-      id_sede: docente.id_sede || docente.sede?.id_sede
+      id_sede: docente.id_sede || docente.sede?.id_sede,
+      genero: docente.genero || '',
+      telefono: telString,
+      direccion: dirLimpia
     };
+
     this.limpiarErrores();
     this.modalEditar.present();
   }
@@ -381,34 +435,55 @@ export class DocentesPage implements OnInit, ViewWillEnter {
   async actualizarDocente() {
     if (!this.docenteSeleccionado) return;
 
-    const rut = this.docenteSeleccionado.rut_usuario;
+    const { nombre_completo, correo, genero, telefono, direccion, id_sede, rut_usuario } = this.docenteSeleccionado;
 
-    if (!this.validarCorreo(this.docenteSeleccionado.correo)) {
-      this.mostrarToast('El correo electrónico ingresado no es válido', 'danger');
+    if (!nombre_completo || !nombre_completo.trim()) {
+      this.mostrarToast('El campo Nombre Completo no puede quedar vacío', 'warning');
       return;
     }
 
-    if (this.docenteSeleccionado.telefono && (this.docenteSeleccionado.telefono.length !== 9 || !this.docenteSeleccionado.telefono.startsWith('9'))) {
-      this.mostrarToast('El teléfono debe contener 9 dígitos e iniciar con 9', 'warning');
+    if (nombre_completo.trim().length < 3) {
+      this.mostrarToast('El nombre debe contener al menos 3 caracteres', 'warning');
       return;
     }
 
+    if (!genero) {
+      this.mostrarToast('Debe seleccionar el Género del docente', 'warning');
+      return;
+    }
+
+    if (!id_sede) {
+      this.mostrarToast('Debe seleccionar una Sede asignada', 'warning');
+      return;
+    }
+
+    let telSanear = String(telefono || '').replace(/\D/g, '');
+    if (telSanear) {
+      if (!telSanear.startsWith('9')) telSanear = '9' + telSanear;
+      if (telSanear.length !== 9) {
+        this.mostrarToast('El teléfono debe tener exactamente 9 dígitos e iniciar con 9', 'warning');
+        return;
+      }
+    }
+
+    // Se envían exactamente 2 argumentos (rut_usuario y payload)
     const payload = {
-      nombre_completo: this.docenteSeleccionado.nombre_completo,
-      correo: this.docenteSeleccionado.correo,
-      genero: this.docenteSeleccionado.genero,
-      telefono: this.docenteSeleccionado.telefono,
-      id_sede: Number(this.docenteSeleccionado.id_sede)
+      nombre_completo: nombre_completo.trim(),
+      correo: correo ? correo.trim() : '',
+      genero: genero,
+      telefono: telSanear || '',
+      direccion: direccion ? direccion.trim() : '',
+      id_sede: Number(id_sede)
     };
 
     try {
-      await firstValueFrom(this.alumnoService.editDocente(rut, payload));
+      await firstValueFrom(this.alumnoService.editDocente(rut_usuario, payload));
       this.mostrarToast('Datos del docente actualizados correctamente', 'success');
       this.modalEditar.dismiss();
       this.obtenerDocentes();
     } catch (err: any) {
       console.error('Error al actualizar docente:', err);
-      const msg = err?.error?.error || 'Error al actualizar el docente';
+      const msg = err?.error?.error || err?.error?.message || 'Error al actualizar el docente';
       this.mostrarToast(msg, 'danger');
     }
   }
@@ -431,7 +506,7 @@ export class DocentesPage implements OnInit, ViewWillEnter {
                 this.mostrarToast(`Docente ${esDeshabilitar ? 'deshabilitado' : 'habilitado'} correctamente`, 'success');
                 this.obtenerDocentes();
               },
-              error: (err) => {
+              error: (err: any) => {
                 console.error(`Error al cambiar estado:`, err);
                 this.mostrarToast(`Error al cambiar el estado del docente`, 'danger');
               }
@@ -451,17 +526,16 @@ export class DocentesPage implements OnInit, ViewWillEnter {
     this.nuevoDocente = {
       nombre_completo: '',
       rut_usuario: '',
-      genero: 'Masculino',
+      genero: '',
       correo: '',
       telefono: '',
       fecha_nacimiento: '',
-      direccion: 'Sin especificar',
+      direccion: '',
       id_sede: null,
       id_tipo_usuario: 3
     };
     this.limpiarErrores();
-    this.archivoSeleccionado = null;
-    this.imagenPreview = null;
+    this.quitarImagenAgregar();
     this.docenteSeleccionado = null;
   }
 
