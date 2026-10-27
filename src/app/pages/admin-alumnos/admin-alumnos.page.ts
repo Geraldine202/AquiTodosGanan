@@ -86,6 +86,11 @@ export class AdminAlumnosPage implements OnInit, ViewWillEnter {
     this.obtenerCatalogos();
   }
 
+  private limpiarRutPuro(rut: any): string {
+    if (!rut) return '';
+    return String(rut).replace(/[^0-9kK]/g, '').trim().toUpperCase();
+  }
+
   // ==========================================
   // MÉTODOS DE MANEJO DE IMÁGENES
   // ==========================================
@@ -203,6 +208,21 @@ export class AdminAlumnosPage implements OnInit, ViewWillEnter {
     return dvIngresado === dvEsperado;
   }
 
+  private esRutDuplicado(rutInput: string, rutActual: string = ''): boolean {
+    if (!rutInput || !Array.isArray(this.alumnos)) return false;
+    
+    const rutLimpioNuevo = this.limpiarRutPuro(rutInput);
+    const rutLimpioActual = this.limpiarRutPuro(rutActual);
+
+    return this.alumnos.some(alu => {
+      const rutExistente = this.limpiarRutPuro(alu.rut_usuario || alu.rut);
+      if (rutLimpioActual && rutExistente === rutLimpioActual) {
+        return false;
+      }
+      return rutExistente === rutLimpioNuevo;
+    });
+  }
+
   onTelefonoInput(event: any, modo: 'nuevo' | 'editar' = 'nuevo') {
     let valor = String(event.target.value || '').replace(/\D/g, '');
 
@@ -254,11 +274,11 @@ export class AdminAlumnosPage implements OnInit, ViewWillEnter {
     if (!correo || !Array.isArray(this.alumnos)) return false;
     
     const correoLimpio = correo.trim().toLowerCase();
-    const rutLimpio = rutActual.replace(/[^0-9kK]/g, '').toUpperCase();
+    const rutLimpio = this.limpiarRutPuro(rutActual);
 
     return this.alumnos.some(alu => {
       const correoExistente = String(alu.correo || alu.email || '').trim().toLowerCase();
-      const rutExistente = String(alu.rut_usuario || alu.rut || '').replace(/[^0-9kK]/g, '').toUpperCase();
+      const rutExistente = this.limpiarRutPuro(alu.rut_usuario || alu.rut);
 
       if (rutLimpio && rutExistente === rutLimpio) {
         return false;
@@ -354,7 +374,7 @@ export class AdminAlumnosPage implements OnInit, ViewWillEnter {
 
     if ([2, 3, 4].includes(tipoUser)) {
       try {
-        const rutSanitizado = encodeURIComponent(alu.rut_usuario);
+        const rutSanitizado = encodeURIComponent(this.limpiarRutPuro(alu.rut_usuario));
 
         const conteo = await firstValueFrom(
           this.actividadService.getConteoActividadesPorUsuario(rutSanitizado)
@@ -405,7 +425,7 @@ export class AdminAlumnosPage implements OnInit, ViewWillEnter {
   cargarHistorial(rut: string) {
     if (!rut) return;
 
-    this.alumnoService.getHistorialByRut(rut).subscribe({
+    this.alumnoService.getHistorialByRut(this.limpiarRutPuro(rut)).subscribe({
       next: (res: any) => {
         const registros = this.extraerArreglo(res);
         this.historialAlumno = registros.map(item => ({
@@ -548,6 +568,12 @@ export class AdminAlumnosPage implements OnInit, ViewWillEnter {
       return;
     }
 
+    if (this.esRutDuplicado(this.nuevoAlumno.rut_usuario)) {
+      this.errores.rut = 'Este RUT ya se encuentra registrado';
+      this.mostrarToast('Error al guardar: El RUT ya está registrado en la base de datos.', 'danger');
+      return;
+    }
+
     if (!this.validarTelefonoChileno(this.nuevoAlumno.telefono)) {
       this.mostrarToast('El teléfono debe tener exactamente 9 dígitos e iniciar con 9 (ej: 912345678)', 'warning');
       return;
@@ -601,10 +627,14 @@ export class AdminAlumnosPage implements OnInit, ViewWillEnter {
       },
       error: (err: any) => {
         console.error('ERROR DETALLADO:', err.error);
-        const detalle = err.error?.error || err.error?.detail || err.error?.message || '';
+        const detalle = err.error?.error || err.error?.detail || err.error?.message || err.message || '';
+        const msgLower = detalle.toLowerCase();
 
-        if (detalle.toLowerCase().includes('correo') || detalle.toLowerCase().includes('email') || detalle.toLowerCase().includes('unique')) {
-          this.errores.correo = 'Correo ya registrado en la base de datos';
+        if (msgLower.includes('rut') || msgLower.includes('rut_usuario') || msgLower.includes('pk_usuario')) {
+          this.errores.rut = 'Este RUT ya se encuentra registrado';
+          this.mostrarToast('Error al guardar: El RUT ya está registrado en la base de datos.', 'danger');
+        } else if (msgLower.includes('correo') || msgLower.includes('email')) {
+          this.errores.correo = 'Este correo ya se encuentra registrado';
           this.mostrarToast('Error al guardar: El correo electrónico ya está registrado en el sistema.', 'danger');
         } else {
           this.mostrarToast(`Error al guardar: ${detalle || 'Error al procesar la solicitud'}`, 'danger');
@@ -630,7 +660,7 @@ export class AdminAlumnosPage implements OnInit, ViewWillEnter {
           text: 'Eliminar',
           role: 'destructive',
           handler: () => {
-            this.alumnoService.deleteAlumno(rut).subscribe({
+            this.alumnoService.deleteAlumno(this.limpiarRutPuro(rut)).subscribe({
               next: () => {
                 if (this.alumnoSeleccionado?.rut_usuario === rut) {
                   this.alumnoSeleccionado = null;
@@ -715,9 +745,9 @@ export class AdminAlumnosPage implements OnInit, ViewWillEnter {
   async actualizarAlumno() {
     if (!this.alumnoSeleccionado) return;
 
-    const rut = String(this.alumnoSeleccionado.rut_usuario).replace(/\./g, '').trim();
+    const rutPure = this.limpiarRutPuro(this.alumnoSeleccionado.rut_usuario);
 
-    if (this.errores.rut || !this.validarRutChileno(rut)) {
+    if (this.errores.rut || !this.validarRutChileno(this.alumnoSeleccionado.rut_usuario)) {
       this.mostrarToast('No se puede actualizar: El RUT ingresado no es válido (Módulo 11)', 'danger');
       return;
     }
@@ -727,7 +757,7 @@ export class AdminAlumnosPage implements OnInit, ViewWillEnter {
       return;
     }
 
-    if (this.esCorreoDuplicado(this.alumnoSeleccionado.correo, rut)) {
+    if (this.esCorreoDuplicado(this.alumnoSeleccionado.correo, rutPure)) {
       this.errores.correo = 'Este correo ya pertenece a otro usuario';
       this.mostrarToast('No se puede actualizar: El correo electrónico pertenece a otro alumno', 'danger');
       return;
@@ -783,7 +813,7 @@ export class AdminAlumnosPage implements OnInit, ViewWillEnter {
     if (cambios.length > 0) {
       const resumenHistorialFinal = cambios.join(' | ');
       const payloadHistorial: HistorialPayload = {
-        rut_usuario: rut,
+        rut_usuario: rutPure,
         descripcion: resumenHistorialFinal,
         id_escuela: this.alumnoSeleccionado.id_escuela ? Number(this.alumnoSeleccionado.id_escuela) : undefined
       };
@@ -829,7 +859,24 @@ export class AdminAlumnosPage implements OnInit, ViewWillEnter {
         observacion: this.justificacionEstado.trim() ? this.justificacionEstado.trim() : null
       };
 
-      await firstValueFrom(this.alumnoService.editAlumno(rut, datosTexto, this.archivoSeleccionado || undefined));
+      const resUpdate = await firstValueFrom(
+        this.alumnoService.editAlumno(rutPure, datosTexto, this.archivoSeleccionado || undefined)
+      );
+
+      // Sincronización inmediata de sesión si nos editamos a nosotros mismos
+      const sesionActual = this.alumnoService.obtenerUsuarioSesion();
+      if (sesionActual) {
+        const rutSesionPuro = this.limpiarRutPuro(sesionActual.rut_usuario || sesionActual.rut);
+        if (rutSesionPuro === rutPure) {
+          const devuelto = resUpdate?.usuario || resUpdate?.alumno || resUpdate?.data || resUpdate;
+          const usuarioActualizado = {
+            ...sesionActual,
+            ...devuelto,
+            id_tipo_usuario: Number(datosTexto.id_tipo_usuario)
+          };
+          this.alumnoService.notificarCambioUsuario(usuarioActualizado);
+        }
+      }
 
       this.mostrarToast('Alumno actualizado correctamente', 'success');
       this.obtenerAlumnos();
@@ -839,9 +886,9 @@ export class AdminAlumnosPage implements OnInit, ViewWillEnter {
 
     } catch (err: any) {
       console.error('Error al actualizar datos del alumno:', err?.error || err);
-      const detalle = err?.error?.error || err?.error?.detail || err?.error?.message || '';
+      const detalle = err?.error?.error || err?.error?.detail || err?.error?.message || err?.message || '';
 
-      if (detalle.toLowerCase().includes('correo') || detalle.toLowerCase().includes('email') || detalle.toLowerCase().includes('unique')) {
+      if (detalle.toLowerCase().includes('correo') || detalle.toLowerCase().includes('email')) {
         this.errores.correo = 'Correo ya registrado en el sistema';
         this.mostrarToast('No se puede actualizar: El correo pertenece a otro usuario registrado', 'danger');
       } else {
@@ -869,23 +916,23 @@ export class AdminAlumnosPage implements OnInit, ViewWillEnter {
     this.errores = { rut: '', correo: '', telefono: '', fecha_nacimiento: '' };
   }
 
-  resetForm() {
-    this.nuevoAlumno = { 
-      rut_usuario: '', 
-      nombre_completo: '', 
-      genero: '', 
+  async resetForm() {
+    this.nuevoAlumno = {
+      rut_usuario: '',
+      nombre_completo: '',
+      genero: '',
       correo: '',
       id_carrera: null,
       id_escuela: null,
       id_sede: 1,
-      id_comuna: 1, 
-      id_periodo_academico: 1, 
+      id_comuna: 1,
+      id_periodo_academico: 1,
       id_estado_matricula: 1,
-      id_tipo_usuario: 1, 
+      id_tipo_usuario: 1,
       id_jornada_carrera: null,
       id_tipo_carrera: null,
-      direccion: '', 
-      telefono: '', 
+      direccion: '',
+      telefono: '',
       fecha_nacimiento: '',
       id_requisito: null,
       puntaje_total: 0,
@@ -897,20 +944,17 @@ export class AdminAlumnosPage implements OnInit, ViewWillEnter {
       observacion: '',
       img_usr: ''
     };
-    this.historialAlumno = [];
-    this.estadoPrevio = null;
-    this.justificacionEstado = '';
-    this.limpiarErrores();
     this.limpiarImagenes();
+    this.limpiarErrores();
   }
 
-  private async mostrarToast(mensaje: string, color: 'success' | 'danger' | 'warning' = 'success') {
+  async mostrarToast(mensaje: string, color: string) {
     const toast = await this.toastController.create({
       message: mensaje,
-      duration: 3000,
+      duration: 3500,
       color: color,
       position: 'bottom'
     });
-    await toast.present();
+    toast.present();
   }
 }

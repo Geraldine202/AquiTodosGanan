@@ -137,7 +137,7 @@
         <ion-toolbar class="modal-toolbar">
           <ion-title>Registrar Alumno</ion-title>
           <ion-buttons slot="end">
-            <ion-button (click)="modalAgregar.dismiss()" color="light">Cancelar</ion-button>
+            <ion-button (click)="modalAgregar.dismiss(); resetForm()" color="light">Cancelar</ion-button>
           </ion-buttons>
         </ion-toolbar>
       </ion-header>
@@ -165,7 +165,7 @@
             </div>
           </div>
 
-          <!-- RUT con formateo en vivo + Mensaje de error -->
+          <!-- RUT con formateo en vivo + Mensaje de error dinámico -->
           <ion-item class="input-modal" lines="none">
             <ion-input 
               label="RUT *" 
@@ -193,7 +193,7 @@
             </ion-select>
           </ion-item>
 
-          <!-- Correo con validación visual -->
+          <!-- Correo con validación visual dinámica -->
           <ion-item class="input-modal" lines="none">
             <ion-input 
               label="Correo Electrónico *" 
@@ -359,7 +359,7 @@
             </ion-select>
           </ion-item>
 
-          <!-- Cuadro de Justificación (Aparece solo si pasa o está en Suspendida) -->
+          <!-- Cuadro de Justificación (Aparece solo si está en Suspendida) -->
           <ion-item class="input-modal" lines="none" *ngIf="esEstadoSuspendida(alumnoSeleccionado.id_estado_matricula)">
             <ion-textarea 
               label="Motivo / Justificación de la Suspensión *" 
@@ -393,15 +393,20 @@
 
             <div *ngIf="historialAlumno && historialAlumno.length > 0; else sinHistorial">
               <ion-card *ngFor="let h of historialAlumno" class="card-historial-item ion-no-margin ion-margin-bottom">
-                <ion-card-content style="padding: 10px;">
-                  <p style="font-size: 0.9rem; color: var(--ion-color-dark); margin-bottom: 6px;">
-                    <ion-icon name="bookmark-outline" color="primary"></ion-icon>
-                    {{ h.historial_academico_resumen || h.resumen || h.descripcion || h.observacion || 'Sin detalle' }}
-                  </p>
-                  <p style="font-size: 0.75rem; color: var(--ion-color-medium); margin: 0;">
-                    <ion-icon name="time-outline"></ion-icon> 
-                    {{ (h.fecha_mostrar || h.fecha_registro || h.fecha || h.created_at) | date:'dd/MM/yyyy HH:mm' }}
-                  </p>
+                <ion-card-content style="padding: 10px; display: flex; align-items: center; justify-content: space-between;">
+                  <div>
+                    <p style="font-size: 0.9rem; color: var(--ion-color-dark); margin-bottom: 6px;">
+                      <ion-icon name="bookmark-outline" color="primary"></ion-icon>
+                      {{ h.historial_academico_resumen || h.resumen || h.descripcion || h.observacion || 'Sin detalle' }}
+                    </p>
+                    <p style="font-size: 0.75rem; color: var(--ion-color-medium); margin: 0;">
+                      <ion-icon name="time-outline"></ion-icon> 
+                      {{ (h.fecha_mostrar || h.fecha_registro || h.fecha || h.created_at) | date:'dd/MM/yyyy HH:mm' }}
+                    </p>
+                  </div>
+                  <ion-button fill="clear" color="danger" size="small" (click)="eliminarHistorial(h.id_historial || h.id)">
+                    <ion-icon name="trash-outline" slot="icon-only"></ion-icon>
+                  </ion-button>
                 </ion-card-content>
               </ion-card>
             </div>

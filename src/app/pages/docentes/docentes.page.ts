@@ -59,6 +59,11 @@ export class DocentesPage implements OnInit, ViewWillEnter {
     this.obtenerCatalogos();
   }
 
+  private limpiarRutPuro(rut: any): string {
+    if (!rut) return '';
+    return String(rut).replace(/[^0-9kK]/g, '').trim().toUpperCase();
+  }
+
   // ==========================================
   // VALIDACIONES Y CONTROL DE ENTRADA
   // ==========================================
@@ -108,6 +113,10 @@ export class DocentesPage implements OnInit, ViewWillEnter {
       this.docenteSeleccionado.rut_usuario = rutFormateado;
     }
 
+    if (event.target) {
+      event.target.value = rutFormateado;
+    }
+
     if (acotado.length >= 8) {
       if (!this.validarRutChileno(acotado)) {
         this.errores.rut = 'El RUT o dígito verificador no es válido (Módulo 11)';
@@ -132,7 +141,6 @@ export class DocentesPage implements OnInit, ViewWillEnter {
     const cuerpo = limpio.slice(0, -1);
     const dvIngresado = limpio.slice(-1);
 
-    // Evitar patrones inválidos con dígitos repetidos (ej. 33333333-3)
     if (/^(\d)\1+$/.test(cuerpo)) {
       return false;
     }
@@ -153,6 +161,21 @@ export class DocentesPage implements OnInit, ViewWillEnter {
     else dvEsperado = String(dvesperadoNum);
 
     return dvIngresado === dvEsperado;
+  }
+
+  private esRutDuplicado(rutInput: string, rutActual: string = ''): boolean {
+    if (!rutInput || !Array.isArray(this.docentes)) return false;
+    
+    const rutLimpioNuevo = this.limpiarRutPuro(rutInput);
+    const rutLimpioActual = this.limpiarRutPuro(rutActual);
+
+    return this.docentes.some(doc => {
+      const rutExistente = this.limpiarRutPuro(doc.rut_usuario || doc.rut);
+      if (rutLimpioActual && rutExistente === rutLimpioActual) {
+        return false;
+      }
+      return rutExistente === rutLimpioNuevo;
+    });
   }
 
   onTelefonoInput(event: any, modo: 'nuevo' | 'editar') {
@@ -179,6 +202,10 @@ export class DocentesPage implements OnInit, ViewWillEnter {
       this.docenteSeleccionado.telefono = valor;
     }
 
+    if (event.target) {
+      event.target.value = valor;
+    }
+
     if (valor.length !== 9) {
       this.errores.telefono = 'El teléfono debe tener exactamente 9 dígitos';
     } else {
@@ -195,11 +222,14 @@ export class DocentesPage implements OnInit, ViewWillEnter {
 
     let correoLimpio = target.correo.trim();
     if (correoLimpio && !correoLimpio.includes('@')) {
-      target.correo = `${correoLimpio}@gmail.com`;
+      correoLimpio = `${correoLimpio}@gmail.com`;
+      target.correo = correoLimpio;
     }
 
     if (!this.validarCorreo(target.correo)) {
       this.errores.correo = 'Ingrese un correo electrónico válido (ej: usuario@gmail.com)';
+    } else if (this.esCorreoDuplicado(target.correo, target.rut_usuario || '')) {
+      this.errores.correo = 'Este correo electrónico ya se encuentra registrado en el sistema';
     } else {
       this.errores.correo = '';
     }
@@ -209,6 +239,24 @@ export class DocentesPage implements OnInit, ViewWillEnter {
     if (!correo) return false;
     const regex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
     return regex.test(correo.trim());
+  }
+
+  private esCorreoDuplicado(correo: string, rutActual: string = ''): boolean {
+    if (!correo || !Array.isArray(this.docentes)) return false;
+    
+    const correoLimpio = correo.trim().toLowerCase();
+    const rutLimpio = this.limpiarRutPuro(rutActual);
+
+    return this.docentes.some(doc => {
+      const correoExistente = String(doc.correo || doc.email || '').trim().toLowerCase();
+      const rutExistente = this.limpiarRutPuro(doc.rut_usuario || doc.rut);
+
+      if (rutLimpio && rutExistente === rutLimpio) {
+        return false;
+      }
+
+      return correoExistente === correoLimpio;
+    });
   }
 
   onFechaNacimientoChange(event: any) {
@@ -365,8 +413,20 @@ export class DocentesPage implements OnInit, ViewWillEnter {
       return;
     }
 
+    if (this.esRutDuplicado(rut_usuario)) {
+      this.errores.rut = 'Este RUT ya se encuentra registrado';
+      this.mostrarToast('Error al guardar: El RUT ya está registrado en la base de datos.', 'danger');
+      return;
+    }
+
     if (!this.validarCorreo(correo)) {
       this.mostrarToast('El correo no tiene un formato válido (ej: usuario@gmail.com)', 'danger');
+      return;
+    }
+
+    if (this.esCorreoDuplicado(correo)) {
+      this.errores.correo = 'Este correo ya está registrado';
+      this.mostrarToast('El correo electrónico ya pertenece a otro docente registrado', 'danger');
       return;
     }
 
@@ -388,7 +448,7 @@ export class DocentesPage implements OnInit, ViewWillEnter {
       nombre_completo: nombre_completo.trim(),
       rut_usuario: rut_usuario.trim(),
       genero: genero,
-      correo: correo.trim(),
+      correo: correo.trim().toLowerCase(),
       telefono: telSanear || '',
       fecha_nacimiento: fecha_nacimiento || null,
       direccion: direccion ? direccion.trim() : '',
@@ -405,8 +465,18 @@ export class DocentesPage implements OnInit, ViewWillEnter {
       },
       error: (err: any) => {
         console.error('Error al registrar docente:', err);
-        const detalle = err.error?.error || err.error?.message || 'Error al procesar la solicitud';
-        this.mostrarToast(`Error: ${detalle}`, 'danger');
+        const detalle = err.error?.error || err.error?.detail || err.error?.message || err.message || '';
+        const msgLower = detalle.toLowerCase();
+
+        if (msgLower.includes('rut') || msgLower.includes('rut_usuario') || msgLower.includes('pk_usuario')) {
+          this.errores.rut = 'Este RUT ya se encuentra registrado';
+          this.mostrarToast('Error al guardar: El RUT ya está registrado en la base de datos.', 'danger');
+        } else if (msgLower.includes('correo') || msgLower.includes('email')) {
+          this.errores.correo = 'Este correo ya se encuentra registrado';
+          this.mostrarToast('Error al guardar: El correo electrónico ya está registrado en el sistema.', 'danger');
+        } else {
+          this.mostrarToast(`Error al guardar: ${detalle || 'Error al procesar la solicitud'}`, 'danger');
+        }
       }
     });
   }
@@ -436,6 +506,7 @@ export class DocentesPage implements OnInit, ViewWillEnter {
     if (!this.docenteSeleccionado) return;
 
     const { nombre_completo, correo, genero, telefono, direccion, id_sede, rut_usuario } = this.docenteSeleccionado;
+    const rutPure = this.limpiarRutPuro(rut_usuario);
 
     if (!nombre_completo || !nombre_completo.trim()) {
       this.mostrarToast('El campo Nombre Completo no puede quedar vacío', 'warning');
@@ -444,6 +515,17 @@ export class DocentesPage implements OnInit, ViewWillEnter {
 
     if (nombre_completo.trim().length < 3) {
       this.mostrarToast('El nombre debe contener al menos 3 caracteres', 'warning');
+      return;
+    }
+
+    if (!this.validarCorreo(correo)) {
+      this.mostrarToast('El correo electrónico no es válido', 'danger');
+      return;
+    }
+
+    if (this.esCorreoDuplicado(correo, rutPure)) {
+      this.errores.correo = 'Este correo ya pertenece a otro usuario';
+      this.mostrarToast('No se puede actualizar: El correo pertenece a otro docente registrado', 'danger');
       return;
     }
 
@@ -466,10 +548,9 @@ export class DocentesPage implements OnInit, ViewWillEnter {
       }
     }
 
-    // Se envían exactamente 2 argumentos (rut_usuario y payload)
     const payload = {
       nombre_completo: nombre_completo.trim(),
-      correo: correo ? correo.trim() : '',
+      correo: correo ? correo.trim().toLowerCase() : '',
       genero: genero,
       telefono: telSanear || '',
       direccion: direccion ? direccion.trim() : '',
@@ -477,14 +558,36 @@ export class DocentesPage implements OnInit, ViewWillEnter {
     };
 
     try {
-      await firstValueFrom(this.alumnoService.editDocente(rut_usuario, payload));
+      const resUpdate = await firstValueFrom(this.alumnoService.editDocente(rutPure, payload));
+
+      // Sincronizar sesión del usuario si se está editando a sí mismo
+      const sesionActual = this.alumnoService.obtenerUsuarioSesion();
+      if (sesionActual) {
+        const rutSesionPuro = this.limpiarRutPuro(sesionActual.rut_usuario || sesionActual.rut);
+        if (rutSesionPuro === rutPure) {
+          const devuelto = resUpdate?.usuario || resUpdate?.docente || resUpdate?.data || resUpdate;
+          const usuarioActualizado = {
+            ...sesionActual,
+            ...devuelto,
+            ...payload
+          };
+          this.alumnoService.notificarCambioUsuario(usuarioActualizado);
+        }
+      }
+
       this.mostrarToast('Datos del docente actualizados correctamente', 'success');
       this.modalEditar.dismiss();
       this.obtenerDocentes();
     } catch (err: any) {
       console.error('Error al actualizar docente:', err);
-      const msg = err?.error?.error || err?.error?.message || 'Error al actualizar el docente';
-      this.mostrarToast(msg, 'danger');
+      const detalle = err?.error?.error || err?.error?.detail || err?.error?.message || err?.message || '';
+
+      if (detalle.toLowerCase().includes('correo') || detalle.toLowerCase().includes('email')) {
+        this.errores.correo = 'Correo ya registrado en el sistema';
+        this.mostrarToast('No se puede actualizar: El correo pertenece a otro usuario registrado', 'danger');
+      } else {
+        this.mostrarToast(detalle || 'Error al actualizar el docente', 'danger');
+      }
     }
   }
 
@@ -501,7 +604,7 @@ export class DocentesPage implements OnInit, ViewWillEnter {
           text: esDeshabilitar ? 'Deshabilitar' : 'Habilitar',
           role: esDeshabilitar ? 'destructive' : 'confirm',
           handler: () => {
-            this.alumnoService.cambiarEstadoDocente(docente.rut_usuario, nuevoEstado).subscribe({
+            this.alumnoService.cambiarEstadoDocente(this.limpiarRutPuro(docente.rut_usuario), nuevoEstado).subscribe({
               next: () => {
                 this.mostrarToast(`Docente ${esDeshabilitar ? 'deshabilitado' : 'habilitado'} correctamente`, 'success');
                 this.obtenerDocentes();

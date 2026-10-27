@@ -283,6 +283,22 @@ getDocentes(): Observable<any[]> {
       return null;
     }
   }
+  /**
+   * Notifica el cambio de datos del usuario actual a toda la aplicación
+   */
+  notificarCambioUsuario(usuarioActualizado: any): void {
+    if (!usuarioActualizado) return;
+
+    // Actualizar almacenamiento local
+    if (localStorage.getItem('usuario')) {
+      localStorage.setItem('usuario', JSON.stringify(usuarioActualizado));
+    } else if (sessionStorage.getItem('usuario')) {
+      sessionStorage.setItem('usuario', JSON.stringify(usuarioActualizado));
+    }
+
+    // Emitir el cambio a los componentes suscritos
+    this.usuarioSubject.next(usuarioActualizado);
+  }
 
   obtenerToken(): string | null {
     return localStorage.getItem('tokenAcceso');
